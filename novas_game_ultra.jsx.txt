@@ -1,0 +1,2058 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+
+// ============================================================
+// NOVAS GAME ULTRA - Complete Space Shooter
+// Version 5.0 ULTRA | 2026
+// ============================================================
+
+const GAME_MODES = {
+  SOLO: "solo",
+  SURVIVAL: "survival",
+  BOSS_RUSH: "boss_rush",
+  TIME_ATTACK: "time_attack",
+  ZEN: "zen",
+  HARDCORE: "hardcore",
+};
+
+const SCREENS = {
+  SPLASH: "splash",
+  DASHBOARD: "dashboard",
+  GAME: "game",
+  GAME_OVER: "game_over",
+  VICTORY: "victory",
+  SETTINGS: "settings",
+  PROFILE: "profile",
+  LEADERBOARD: "leaderboard",
+  ACHIEVEMENTS: "achievements",
+  SHOP: "shop",
+  MISSIONS: "missions",
+  GUILDS: "guilds",
+  TOURNAMENT: "tournament",
+  HOW_TO_PLAY: "how_to_play",
+};
+
+const RANKS = [
+  { name: "Recruit", min: 0, color: "#9CA3AF", icon: "⭐" },
+  { name: "Pilot", min: 500, color: "#34D399", icon: "🌟" },
+  { name: "Commander", min: 2000, color: "#60A5FA", icon: "💫" },
+  { name: "Elite", min: 5000, color: "#A78BFA", icon: "✨" },
+  { name: "Legend", min: 10000, color: "#F59E0B", icon: "🏆" },
+  { name: "NOVAS", min: 25000, color: "#EF4444", icon: "👑" },
+];
+
+const ACHIEVEMENTS_DATA = [
+  { id: "first_kill", title: "First Blood", desc: "Destroy your first enemy", icon: "🎯", points: 10, rarity: "common" },
+  { id: "combo_5", title: "Combo Master", desc: "Reach a 5x combo", icon: "🔥", points: 25, rarity: "rare" },
+  { id: "combo_10", title: "Unstoppable", desc: "Reach a 10x combo", icon: "⚡", points: 50, rarity: "epic" },
+  { id: "score_1000", title: "Rising Star", desc: "Score 1,000 points", icon: "⭐", points: 15, rarity: "common" },
+  { id: "score_10000", title: "Galaxy Brain", desc: "Score 10,000 points", icon: "🌌", points: 75, rarity: "epic" },
+  { id: "score_50000", title: "Universal Legend", desc: "Score 50,000 points", icon: "👑", points: 200, rarity: "legendary" },
+  { id: "level_5", title: "Veteran", desc: "Reach level 5", icon: "🎖️", points: 30, rarity: "rare" },
+  { id: "level_10", title: "Commander", desc: "Reach level 10", icon: "🏅", points: 100, rarity: "epic" },
+  { id: "survive_120", title: "Survivor", desc: "Survive 2 minutes", icon: "🛡️", points: 40, rarity: "rare" },
+  { id: "perfect_level", title: "Perfectionist", desc: "Complete a level without taking damage", icon: "💎", points: 150, rarity: "legendary" },
+  { id: "play_10", title: "Dedicated", desc: "Play 10 games", icon: "🎮", points: 20, rarity: "common" },
+  { id: "play_50", title: "Addicted", desc: "Play 50 games", icon: "🎯", points: 60, rarity: "rare" },
+  { id: "kill_100", title: "Destroyer", desc: "Destroy 100 enemies total", icon: "💥", points: 50, rarity: "rare" },
+  { id: "kill_500", title: "Exterminator", desc: "Destroy 500 enemies total", icon: "☄️", points: 150, rarity: "epic" },
+  { id: "boss_kill", title: "Boss Slayer", desc: "Defeat your first boss", icon: "🐉", points: 100, rarity: "epic" },
+  { id: "daily_3", title: "Daily Warrior", desc: "Complete 3 daily missions", icon: "📅", points: 35, rarity: "rare" },
+  { id: "night_owl", title: "Night Owl", desc: "Play after midnight", icon: "🦉", points: 25, rarity: "common" },
+  { id: "speed_demon", title: "Speed Demon", desc: "Complete level in under 30s", icon: "⚡", points: 80, rarity: "epic" },
+  { id: "no_power", title: "Pure Skill", desc: "Complete level without powerups", icon: "🧠", points: 120, rarity: "epic" },
+  { id: "max_rank", title: "NOVAS Master", desc: "Reach NOVAS rank", icon: "🌟", points: 500, rarity: "legendary" },
+];
+
+const DAILY_MISSIONS_DATA = [
+  { id: "dm1", title: "Daily Destroyer", desc: "Destroy 20 enemies", target: 20, type: "kills", reward: 100, icon: "💥" },
+  { id: "dm2", title: "Score Hunter", desc: "Score 500 points", target: 500, type: "score", reward: 150, icon: "🎯" },
+  { id: "dm3", title: "Survivor Pro", desc: "Survive 60 seconds", target: 60, type: "survive", reward: 120, icon: "🛡️" },
+  { id: "dm4", title: "Combo King", desc: "Reach a 5x combo", target: 5, type: "combo", reward: 200, icon: "🔥" },
+  { id: "dm5", title: "Speed Runner", desc: "Complete a level in 45s", target: 45, type: "speed", reward: 180, icon: "⚡" },
+];
+
+const SHOP_ITEMS = [
+  { id: "ship_gold", name: "Golden Cruiser", price: 500, type: "ship", icon: "🚀", color: "#F59E0B", rarity: "rare", desc: "Gleaming golden warship" },
+  { id: "ship_plasma", name: "Plasma Raider", price: 750, type: "ship", icon: "🛸", color: "#8B5CF6", rarity: "epic", desc: "Plasma-powered assault craft" },
+  { id: "ship_shadow", name: "Shadow Phantom", price: 1200, type: "ship", icon: "🌑", color: "#1F2937", rarity: "legendary", desc: "Stealth infiltration vessel" },
+  { id: "ship_nova", name: "Nova Destroyer", price: 2000, type: "ship", icon: "⭐", color: "#EF4444", rarity: "legendary", desc: "Ultimate combat destroyer" },
+  { id: "trail_fire", name: "Fire Trail", price: 300, type: "trail", icon: "🔥", color: "#F97316", rarity: "rare", desc: "Blazing fire particles" },
+  { id: "trail_ice", name: "Ice Stream", price: 300, type: "trail", icon: "❄️", color: "#93C5FD", rarity: "rare", desc: "Frozen crystal trail" },
+  { id: "trail_star", name: "Stardust", price: 600, type: "trail", icon: "✨", color: "#FDE68A", rarity: "epic", desc: "Golden stardust effect" },
+  { id: "bullet_plasma", name: "Plasma Rounds", price: 400, type: "bullet", icon: "💜", color: "#7C3AED", rarity: "rare", desc: "Plasma projectiles" },
+  { id: "bullet_laser", name: "Laser Beams", price: 600, type: "bullet", icon: "🔴", color: "#DC2626", rarity: "epic", desc: "High-intensity laser fire" },
+  { id: "xp_boost", name: "XP Boost x2", price: 200, type: "boost", icon: "⚡", color: "#10B981", rarity: "common", desc: "Double XP for 1 hour" },
+  { id: "shield_extra", name: "Extra Shield", price: 350, type: "powerup", icon: "🛡️", color: "#3B82F6", rarity: "rare", desc: "Start with full shield" },
+  { id: "coins_pack", name: "Coin Pack x500", price: 4.99, type: "currency", icon: "💰", color: "#F59E0B", rarity: "common", desc: "500 Nova Coins", real: true },
+];
+
+const THEMES = {
+  default: { bg: "#000000", text: "#FFFFFF", accent: "#3B82F6", secondary: "#1F2937" },
+  neon: { bg: "#0D0D1A", text: "#00FF88", accent: "#FF00FF", secondary: "#1A0A2E" },
+  crimson: { bg: "#0A0000", text: "#FF6B6B", accent: "#EF4444", secondary: "#1A0000" },
+  ocean: { bg: "#001A2E", text: "#7DD3FC", accent: "#0EA5E9", secondary: "#003050" },
+  purple: { bg: "#0D001A", text: "#C4B5FD", accent: "#7C3AED", secondary: "#1A0033" },
+  gold: { bg: "#0A0800", text: "#FDE68A", accent: "#F59E0B", secondary: "#1A1400" },
+};
+
+const LANGUAGES = {
+  fr: { play: "JOUER", settings: "Paramètres", profile: "Profil", leaderboard: "Classement", achievements: "Succès", shop: "Boutique", missions: "Missions", score: "Score", level: "Niveau", lives: "Vies", rank: "Rang" },
+  en: { play: "PLAY", settings: "Settings", profile: "Profile", leaderboard: "Leaderboard", achievements: "Achievements", shop: "Shop", missions: "Missions", score: "Score", level: "Level", lives: "Lives", rank: "Rank" },
+  es: { play: "JUGAR", settings: "Ajustes", profile: "Perfil", leaderboard: "Clasificación", achievements: "Logros", shop: "Tienda", missions: "Misiones", score: "Puntuación", level: "Nivel", lives: "Vidas", rank: "Rango" },
+  de: { play: "SPIELEN", settings: "Einstellungen", profile: "Profil", leaderboard: "Rangliste", achievements: "Erfolge", shop: "Shop", missions: "Missionen", score: "Punkte", level: "Level", lives: "Leben", rank: "Rang" },
+  pt: { play: "JOGAR", settings: "Configurações", profile: "Perfil", leaderboard: "Placar", achievements: "Conquistas", shop: "Loja", missions: "Missões", score: "Pontuação", level: "Nível", lives: "Vidas", rank: "Classificação" },
+};
+
+function initPlayerData() {
+  const saved = localStorage.getItem("novas_player");
+  if (saved) return JSON.parse(saved);
+  return {
+    id: Math.random().toString(36).slice(2, 10).toUpperCase(),
+    username: "Player_" + Math.floor(Math.random() * 9999),
+    avatar: "🚀",
+    level: 1,
+    xp: 0,
+    coins: 500,
+    gems: 10,
+    totalScore: 0,
+    bestScore: 0,
+    totalKills: 0,
+    totalGames: 0,
+    totalWins: 0,
+    totalTimePlayed: 0,
+    bestCombo: 0,
+    achievements: [],
+    inventory: [],
+    equippedShip: "default",
+    equippedTrail: "none",
+    equippedBullet: "default",
+    theme: "default",
+    language: "fr",
+    dailyMissions: [],
+    lastDaily: null,
+    leaderboard: [],
+    settings: {
+      sfx: true,
+      music: true,
+      volume: 0.7,
+      particleDensity: "high",
+      screenShake: true,
+      showFPS: false,
+      difficulty: "normal",
+      colorblind: false,
+      language: "fr",
+    },
+    createdAt: Date.now(),
+    lastLogin: Date.now(),
+  };
+}
+
+function savePlayer(data) {
+  localStorage.setItem("novas_player", JSON.stringify(data));
+}
+
+function getXPForLevel(level) {
+  return Math.floor(100 * Math.pow(1.5, level - 1));
+}
+
+function getRank(score) {
+  let rank = RANKS[0];
+  for (const r of RANKS) {
+    if (score >= r.min) rank = r;
+  }
+  return rank;
+}
+
+function AudioEngine() {
+  const ctx = useRef(null);
+  const gainNode = useRef(null);
+
+  const init = useCallback(() => {
+    if (!ctx.current) {
+      ctx.current = new (window.AudioContext || window.webkitAudioContext)();
+      gainNode.current = ctx.current.createGain();
+      gainNode.current.connect(ctx.current.destination);
+    }
+  }, []);
+
+  const play = useCallback((type, volume = 0.3) => {
+    try {
+      init();
+      if (ctx.current.state === "suspended") ctx.current.resume();
+      const osc = ctx.current.createOscillator();
+      const gain = ctx.current.createGain();
+      osc.connect(gain);
+      gain.connect(gainNode.current);
+
+      const configs = {
+        shoot: { freq: 800, type: "square", duration: 0.08, attack: 0, decay: 0.08 },
+        hit: { freq: 200, type: "sawtooth", duration: 0.15, attack: 0, decay: 0.15 },
+        explosion: { freq: 80, type: "sawtooth", duration: 0.3, attack: 0, decay: 0.3 },
+        powerup: { freq: 600, type: "sine", duration: 0.4, attack: 0.05, decay: 0.35 },
+        levelup: { freq: 440, type: "sine", duration: 0.6, attack: 0.05, decay: 0.55 },
+        gameover: { freq: 150, type: "sawtooth", duration: 0.8, attack: 0, decay: 0.8 },
+        click: { freq: 1000, type: "square", duration: 0.05, attack: 0, decay: 0.05 },
+        coin: { freq: 1200, type: "sine", duration: 0.2, attack: 0, decay: 0.2 },
+        achievement: { freq: 880, type: "sine", duration: 0.5, attack: 0.02, decay: 0.48 },
+      };
+
+      const c = configs[type] || configs.click;
+      osc.type = c.type;
+      osc.frequency.setValueAtTime(c.freq, ctx.current.currentTime);
+      if (type === "explosion") {
+        osc.frequency.exponentialRampToValueAtTime(20, ctx.current.currentTime + c.duration);
+      } else if (type === "levelup") {
+        osc.frequency.setValueAtTime(440, ctx.current.currentTime);
+        osc.frequency.setValueAtTime(550, ctx.current.currentTime + 0.15);
+        osc.frequency.setValueAtTime(660, ctx.current.currentTime + 0.3);
+      }
+      gain.gain.setValueAtTime(0, ctx.current.currentTime);
+      gain.gain.linearRampToValueAtTime(volume, ctx.current.currentTime + c.attack + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.current.currentTime + c.duration);
+      osc.start(ctx.current.currentTime);
+      osc.stop(ctx.current.currentTime + c.duration + 0.01);
+    } catch (e) {}
+  }, [init]);
+
+  return { play };
+}
+
+// ============================================================
+// MAIN GAME COMPONENT
+// ============================================================
+export default function NovasGameUltra() {
+  const [screen, setScreen] = useState(SCREENS.SPLASH);
+  const [player, setPlayer] = useState(initPlayerData);
+  const [gameMode, setGameMode] = useState(GAME_MODES.SOLO);
+  const [notification, setNotification] = useState(null);
+  const [activeTab, setActiveTab] = useState("general");
+  const audio = AudioEngine();
+  const splashTimer = useRef(null);
+
+  useEffect(() => {
+    savePlayer(player);
+  }, [player]);
+
+  useEffect(() => {
+    splashTimer.current = setTimeout(() => setScreen(SCREENS.DASHBOARD), 2500);
+    return () => clearTimeout(splashTimer.current);
+  }, []);
+
+  const showNotif = useCallback((msg, type = "info", icon = "ℹ️") => {
+    setNotification({ msg, type, icon, id: Date.now() });
+    setTimeout(() => setNotification(null), 3000);
+  }, []);
+
+  const t = LANGUAGES[player.settings.language] || LANGUAGES.fr;
+  const theme = THEMES[player.theme] || THEMES.default;
+
+  const updatePlayer = useCallback((updates) => {
+    setPlayer(prev => {
+      const updated = typeof updates === "function" ? updates(prev) : { ...prev, ...updates };
+      savePlayer(updated);
+      return updated;
+    });
+  }, []);
+
+  const buyItem = useCallback((item) => {
+    if (item.real) {
+      showNotif("Paiement requis - intégration Stripe en production", "info", "💳");
+      return;
+    }
+    if (player.coins < item.price) {
+      showNotif("Coins insuffisants!", "error", "❌");
+      audio.play("hit");
+      return;
+    }
+    if (player.inventory.includes(item.id)) {
+      showNotif("Déjà possédé!", "info", "ℹ️");
+      return;
+    }
+    updatePlayer(prev => ({
+      ...prev,
+      coins: prev.coins - item.price,
+      inventory: [...prev.inventory, item.id],
+    }));
+    showNotif(`${item.name} acheté!`, "success", "🎉");
+    audio.play("coin");
+  }, [player, updatePlayer, showNotif, audio]);
+
+  const unlockAchievement = useCallback((id) => {
+    if (player.achievements.includes(id)) return;
+    const ach = ACHIEVEMENTS_DATA.find(a => a.id === id);
+    if (!ach) return;
+    updatePlayer(prev => ({
+      ...prev,
+      achievements: [...prev.achievements, id],
+      coins: prev.coins + ach.points,
+    }));
+    showNotif(`🏆 Succès: ${ach.title}! +${ach.points} coins`, "achievement", "🏆");
+    audio.play("achievement");
+  }, [player.achievements, updatePlayer, showNotif, audio]);
+
+  const onGameEnd = useCallback((result) => {
+    const { score, kills, survived, combo, level: lvl, perfect, timeMs } = result;
+    updatePlayer(prev => {
+      let newXP = prev.xp + Math.floor(score / 10) + kills * 5;
+      let newLevel = prev.level;
+      while (newXP >= getXPForLevel(newLevel)) {
+        newXP -= getXPForLevel(newLevel);
+        newLevel++;
+      }
+      const gained = newLevel > prev.level;
+      const newCoins = prev.coins + Math.floor(score / 100) + kills * 2;
+      const newAchs = [...prev.achievements];
+
+      const check = (id, cond) => { if (cond && !newAchs.includes(id)) { newAchs.push(id); setTimeout(() => showNotif(`🏆 ${ACHIEVEMENTS_DATA.find(a=>a.id===id)?.title}!`, "achievement", "🏆"), 1500); audio.play("achievement"); } };
+      check("first_kill", kills > 0);
+      check("combo_5", combo >= 5);
+      check("combo_10", combo >= 10);
+      check("score_1000", score >= 1000);
+      check("score_10000", score >= 10000);
+      check("score_50000", score >= 50000);
+      check("level_5", newLevel >= 5);
+      check("level_10", newLevel >= 10);
+      check("survive_120", survived >= 120);
+      check("perfect_level", perfect);
+      check("play_10", prev.totalGames + 1 >= 10);
+      check("play_50", prev.totalGames + 1 >= 50);
+      check("kill_100", prev.totalKills + kills >= 100);
+      check("kill_500", prev.totalKills + kills >= 500);
+      check("speed_demon", timeMs < 30000 && lvl >= 1);
+
+      if (gained) { setTimeout(() => { showNotif(`🎉 Niveau ${newLevel}!`, "levelup", "🚀"); audio.play("levelup"); }, 500); }
+
+      return {
+        ...prev,
+        xp: newXP,
+        level: newLevel,
+        coins: newCoins,
+        totalScore: prev.totalScore + score,
+        bestScore: Math.max(prev.bestScore, score),
+        totalKills: prev.totalKills + kills,
+        totalGames: prev.totalGames + 1,
+        bestCombo: Math.max(prev.bestCombo, combo),
+        totalTimePlayed: prev.totalTimePlayed + Math.floor(survived),
+        achievements: newAchs,
+      };
+    });
+    if (score > 0) setScreen(SCREENS.GAME_OVER);
+  }, [updatePlayer, showNotif, audio]);
+
+  const rank = getRank(player.bestScore);
+  const xpNeeded = getXPForLevel(player.level);
+  const xpPct = Math.min(100, (player.xp / xpNeeded) * 100);
+
+  return (
+    <div style={{
+      width: "100%",
+      minHeight: "100vh",
+      background: theme.bg,
+      color: theme.text,
+      fontFamily: "'Courier New', monospace",
+      overflow: "hidden",
+      position: "relative",
+    }}>
+      {/* NOTIFICATION */}
+      {notification && (
+        <div style={{
+          position: "fixed",
+          top: 20,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: notification.type === "error" ? "#7F1D1D" : notification.type === "achievement" ? "#78350F" : notification.type === "success" ? "#064E3B" : "#1E3A5F",
+          border: `1px solid ${notification.type === "error" ? "#EF4444" : notification.type === "achievement" ? "#F59E0B" : notification.type === "success" ? "#10B981" : theme.accent}`,
+          color: "#FFFFFF",
+          padding: "12px 24px",
+          borderRadius: 8,
+          zIndex: 9999,
+          fontSize: 14,
+          fontWeight: "bold",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+          animation: "fadeInDown 0.3s ease",
+          whiteSpace: "nowrap",
+        }}>
+          {notification.icon} {notification.msg}
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeInDown { from { opacity:0; transform:translateX(-50%) translateY(-20px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+        @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+        @keyframes glow { 0%,100% { text-shadow:0 0 10px currentColor; } 50% { text-shadow:0 0 30px currentColor, 0 0 60px currentColor; } }
+        @keyframes slideIn { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes starfield { from { transform:translateY(-100%); } to { transform:translateY(100vh); } }
+        ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:#111; } ::-webkit-scrollbar-thumb { background:#333; border-radius:2px; }
+        .btn-primary { background:linear-gradient(135deg, #1D4ED8, #3B82F6); border:none; color:#fff; padding:12px 28px; border-radius:8px; cursor:pointer; font-family:'Courier New',monospace; font-size:14px; font-weight:bold; transition:all 0.2s; letter-spacing:1px; }
+        .btn-primary:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(59,130,246,0.4); }
+        .btn-secondary { background:transparent; border:1px solid #374151; color:#9CA3AF; padding:10px 22px; border-radius:8px; cursor:pointer; font-family:'Courier New',monospace; font-size:13px; transition:all 0.2s; }
+        .btn-secondary:hover { border-color:#6B7280; color:#fff; background:#1F2937; }
+        .card { background:#111827; border:1px solid #1F2937; border-radius:12px; padding:20px; transition:all 0.2s; }
+        .card:hover { border-color:#374151; }
+        .nav-btn { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 16px; background:none; border:none; color:#6B7280; cursor:pointer; font-size:11px; font-family:'Courier New',monospace; transition:all 0.2s; border-radius:8px; }
+        .nav-btn.active { color:#3B82F6; background:#1E3A5F22; }
+        .nav-btn:hover { color:#9CA3AF; }
+        .progress-bar { background:#1F2937; border-radius:100px; overflow:hidden; }
+        .progress-fill { border-radius:100px; transition:width 0.5s ease; }
+        .rarity-common { color:#9CA3AF; } .rarity-rare { color:#60A5FA; } .rarity-epic { color:#A78BFA; } .rarity-legendary { color:#F59E0B; }
+        input[type=range] { accent-color:#3B82F6; }
+        select { background:#1F2937; border:1px solid #374151; color:#fff; padding:6px 10px; border-radius:6px; font-family:'Courier New',monospace; }
+      `}</style>
+
+      {/* SCREENS */}
+      {screen === SCREENS.SPLASH && <SplashScreen theme={theme} onSkip={() => { clearTimeout(splashTimer.current); setScreen(SCREENS.DASHBOARD); }} />}
+      {screen === SCREENS.DASHBOARD && <Dashboard player={player} t={t} theme={theme} rank={rank} xpPct={xpPct} xpNeeded={xpNeeded} setScreen={setScreen} setGameMode={setGameMode} audio={audio} updatePlayer={updatePlayer} showNotif={showNotif} />}
+      {screen === SCREENS.GAME && <GameCanvas player={player} gameMode={gameMode} theme={theme} audio={audio} onEnd={onGameEnd} onQuit={() => setScreen(SCREENS.DASHBOARD)} />}
+      {screen === SCREENS.GAME_OVER && <GameOverScreen player={player} setScreen={setScreen} audio={audio} theme={theme} />}
+      {screen === SCREENS.SETTINGS && <SettingsScreen player={player} updatePlayer={updatePlayer} setScreen={setScreen} theme={theme} audio={audio} showNotif={showNotif} />}
+      {screen === SCREENS.PROFILE && <ProfileScreen player={player} updatePlayer={updatePlayer} setScreen={setScreen} theme={theme} rank={rank} xpPct={xpPct} xpNeeded={xpNeeded} showNotif={showNotif} audio={audio} />}
+      {screen === SCREENS.LEADERBOARD && <LeaderboardScreen player={player} setScreen={setScreen} theme={theme} />}
+      {screen === SCREENS.ACHIEVEMENTS && <AchievementsScreen player={player} setScreen={setScreen} theme={theme} unlockAchievement={unlockAchievement} />}
+      {screen === SCREENS.SHOP && <ShopScreen player={player} setScreen={setScreen} theme={theme} buyItem={buyItem} audio={audio} updatePlayer={updatePlayer} showNotif={showNotif} />}
+      {screen === SCREENS.MISSIONS && <MissionsScreen player={player} setScreen={setScreen} theme={theme} updatePlayer={updatePlayer} showNotif={showNotif} audio={audio} />}
+      {screen === SCREENS.TOURNAMENT && <TournamentScreen player={player} setScreen={setScreen} theme={theme} audio={audio} showNotif={showNotif} />}
+      {screen === SCREENS.HOW_TO_PLAY && <HowToPlayScreen setScreen={setScreen} theme={theme} />}
+    </div>
+  );
+}
+
+// ============================================================
+// SPLASH SCREEN
+// ============================================================
+function SplashScreen({ theme, onSkip }) {
+  const [opacity, setOpacity] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [loadText, setLoadText] = useState("Initialisation...");
+
+  useEffect(() => {
+    setTimeout(() => setOpacity(1), 100);
+    const steps = [
+      [300, "Chargement du moteur graphique..."],
+      [700, "Systèmes audio en ligne..."],
+      [1100, "Chargement des données..."],
+      [1600, "Calibration des ennemis..."],
+      [2000, "Bienvenue dans NOVAS GAME!"],
+    ];
+    steps.forEach(([t, txt]) => setTimeout(() => setLoadText(txt), t));
+
+    let p = 0;
+    const intv = setInterval(() => { p += 2; setProgress(Math.min(100, p)); if (p >= 100) clearInterval(intv); }, 40);
+    return () => clearInterval(intv);
+  }, []);
+
+  return (
+    <div onClick={onSkip} style={{ width:"100%", height:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"radial-gradient(ellipse at center, #0A0A2E 0%, #000000 70%)", cursor:"pointer", position:"relative", overflow:"hidden", opacity, transition:"opacity 0.5s" }}>
+      {/* Stars */}
+      {Array.from({length:80}).map((_,i) => (
+        <div key={i} style={{ position:"absolute", borderRadius:"50%", background:"#fff", opacity:Math.random()*0.7+0.1, width:Math.random()*2+1, height:Math.random()*2+1, left:`${Math.random()*100}%`, top:`${Math.random()*100}%`, animation:`pulse ${Math.random()*3+2}s ease-in-out infinite`, animationDelay:`${Math.random()*3}s` }} />
+      ))}
+
+      {/* Logo */}
+      <div style={{ textAlign:"center", zIndex:10 }}>
+        <div style={{ fontSize:80, marginBottom:16, animation:"glow 2s ease-in-out infinite", color:"#3B82F6" }}>🌌</div>
+        <div style={{ fontSize:52, fontWeight:"bold", letterSpacing:12, color:"#FFFFFF", textShadow:"0 0 30px #3B82F6, 0 0 60px #3B82F6", marginBottom:8 }}>NOVAS</div>
+        <div style={{ fontSize:18, letterSpacing:8, color:"#60A5FA", marginBottom:4 }}>G A M E</div>
+        <div style={{ fontSize:11, color:"#374151", letterSpacing:4, marginBottom:40 }}>ULTRA EDITION v5.0</div>
+
+        <div style={{ width:300, height:3, background:"#1F2937", borderRadius:100, overflow:"hidden", margin:"0 auto 12px" }}>
+          <div style={{ width:`${progress}%`, height:"100%", background:"linear-gradient(90deg,#1D4ED8,#60A5FA)", transition:"width 0.1s", borderRadius:100 }} />
+        </div>
+        <div style={{ fontSize:11, color:"#4B5563", letterSpacing:2 }}>{loadText}</div>
+        <div style={{ fontSize:10, color:"#374151", marginTop:20, animation:"pulse 1s ease-in-out infinite" }}>APPUYER POUR PASSER</div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function Dashboard({ player, t, theme, rank, xpPct, xpNeeded, setScreen, setGameMode, audio, updatePlayer, showNotif }) {
+  const [activeDash, setActiveDash] = useState("home");
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+
+  const navItems = [
+    { id:"home", icon:"🏠", label:"Accueil" },
+    { id:"play", icon:"🎮", label:t.play },
+    { id:"stats", icon:"📊", label:"Stats" },
+    { id:"social", icon:"👥", label:"Social" },
+  ];
+
+  const bottomNav = [
+    { screen:SCREENS.MISSIONS, icon:"📋", label:t.missions },
+    { screen:SCREENS.SHOP, icon:"🛍️", label:t.shop },
+    { screen:SCREENS.ACHIEVEMENTS, icon:"🏆", label:t.achievements },
+    { screen:SCREENS.LEADERBOARD, icon:"🥇", label:t.leaderboard },
+    { screen:SCREENS.SETTINGS, icon:"⚙️", label:t.settings },
+  ];
+
+  return (
+    <div style={{ maxWidth:480, margin:"0 auto", minHeight:"100vh", display:"flex", flexDirection:"column", background: theme.bg }}>
+      {/* Header */}
+      <div style={{ padding:"16px 20px 12px", background:"linear-gradient(180deg,#111827,transparent)" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <div style={{ fontSize:12, color:"#6B7280" }}>{greeting},</div>
+            <div style={{ fontSize:18, fontWeight:"bold", color:"#FFFFFF" }}>{player.username}</div>
+          </div>
+          <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+            <div style={{ fontSize:12, background:"#1F2937", padding:"4px 10px", borderRadius:20, color:"#F59E0B", display:"flex", alignItems:"center", gap:4 }}>
+              <span>💰</span><span>{player.coins.toLocaleString()}</span>
+            </div>
+            <div style={{ fontSize:12, background:"#1F2937", padding:"4px 10px", borderRadius:20, color:"#A78BFA", display:"flex", alignItems:"center", gap:4 }}>
+              <span>💎</span><span>{player.gems}</span>
+            </div>
+            <button onClick={() => { audio.play("click"); setScreen(SCREENS.PROFILE); }} style={{ width:36, height:36, borderRadius:"50%", background:"#1F2937", border:`2px solid ${rank.color}`, cursor:"pointer", fontSize:20, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              {player.avatar}
+            </button>
+          </div>
+        </div>
+
+        {/* XP Bar */}
+        <div style={{ marginTop:12 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:"#6B7280", marginBottom:4 }}>
+            <span style={{ color:rank.color }}>{rank.icon} {rank.name}</span>
+            <span>Niv. {player.level} • {player.xp}/{xpNeeded} XP</span>
+          </div>
+          <div className="progress-bar" style={{ height:4 }}>
+            <div className="progress-fill" style={{ width:`${xpPct}%`, height:"100%", background:`linear-gradient(90deg,${rank.color},#FFFFFF44)` }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Sub Nav */}
+      <div style={{ display:"flex", gap:4, padding:"0 20px 12px", overflowX:"auto" }}>
+        {navItems.map(n => (
+          <button key={n.id} onClick={() => { setActiveDash(n.id); audio.play("click"); }} style={{ padding:"6px 14px", borderRadius:20, border:"none", cursor:"pointer", fontSize:12, whiteSpace:"nowrap", background:activeDash===n.id?"#1D4ED8":"#1F2937", color:activeDash===n.id?"#fff":"#9CA3AF", fontFamily:"'Courier New',monospace" }}>
+            {n.icon} {n.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{ flex:1, padding:"0 16px", overflowY:"auto", paddingBottom:80 }}>
+        {activeDash === "home" && <DashHome player={player} rank={rank} setScreen={setScreen} setActiveDash={setActiveDash} audio={audio} theme={theme} />}
+        {activeDash === "play" && <DashPlay setScreen={setScreen} setGameMode={setGameMode} audio={audio} theme={theme} />}
+        {activeDash === "stats" && <DashStats player={player} rank={rank} theme={theme} />}
+        {activeDash === "social" && <DashSocial player={player} showNotif={showNotif} audio={audio} theme={theme} />}
+      </div>
+
+      {/* Bottom Nav */}
+      <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:"#111827", borderTop:"1px solid #1F2937", display:"flex", justifyContent:"space-around", padding:"8px 0", zIndex:100 }}>
+        {bottomNav.map(n => (
+          <button key={n.screen} className="nav-btn" onClick={() => { audio.play("click"); setScreen(n.screen); }}>
+            <span style={{ fontSize:20 }}>{n.icon}</span>
+            <span>{n.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DashHome({ player, rank, setScreen, setActiveDash, audio }) {
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+      {/* Quick Play */}
+      <div style={{ background:"linear-gradient(135deg,#1E3A5F,#1D4ED8)", borderRadius:16, padding:24, position:"relative", overflow:"hidden", cursor:"pointer" }} onClick={() => { audio.play("click"); setActiveDash("play"); }}>
+        <div style={{ position:"absolute", right:-20, top:-20, fontSize:80, opacity:0.15 }}>🚀</div>
+        <div style={{ fontSize:11, color:"#93C5FD", letterSpacing:3, marginBottom:8 }}>PRÊT À JOUER?</div>
+        <div style={{ fontSize:28, fontWeight:"bold", color:"#fff", marginBottom:4 }}>LANCER LA PARTIE</div>
+        <div style={{ fontSize:12, color:"#93C5FD" }}>6 modes de jeu disponibles</div>
+        <div style={{ marginTop:16, display:"inline-block", background:"#FFFFFF22", padding:"8px 20px", borderRadius:20, fontSize:13, color:"#fff", fontWeight:"bold" }}>
+          ▶ JOUER MAINTENANT
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+        {[
+          { label:"Meilleur Score", value:player.bestScore.toLocaleString(), icon:"🏆", color:"#F59E0B" },
+          { label:"Parties", value:player.totalGames, icon:"🎮", color:"#60A5FA" },
+          { label:"Kills", value:player.totalKills, icon:"💥", color:"#EF4444" },
+        ].map(s => (
+          <div key={s.label} style={{ background:"#111827", border:"1px solid #1F2937", borderRadius:10, padding:12, textAlign:"center" }}>
+            <div style={{ fontSize:20, marginBottom:4 }}>{s.icon}</div>
+            <div style={{ fontSize:16, fontWeight:"bold", color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:9, color:"#6B7280", marginTop:2 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Rank Card */}
+      <div style={{ background:"#111827", border:`1px solid ${rank.color}33`, borderRadius:12, padding:16, display:"flex", alignItems:"center", gap:16 }}>
+        <div style={{ fontSize:40 }}>{rank.icon}</div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:11, color:"#6B7280", marginBottom:2 }}>RANG ACTUEL</div>
+          <div style={{ fontSize:20, fontWeight:"bold", color:rank.color }}>{rank.name}</div>
+          <div style={{ fontSize:11, color:"#6B7280" }}>Score requis: {rank.min.toLocaleString()} pts</div>
+        </div>
+        <button className="btn-secondary" style={{ fontSize:12, padding:"8px 14px" }} onClick={() => { audio.play("click"); setScreen(SCREENS.LEADERBOARD); }}>
+          Top 100 →
+        </button>
+      </div>
+
+      {/* Quick Actions */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+        {[
+          { label:"Missions", icon:"📋", screen:SCREENS.MISSIONS, color:"#10B981" },
+          { label:"Succès", icon:"🏆", screen:SCREENS.ACHIEVEMENTS, color:"#F59E0B" },
+          { label:"Tournoi", icon:"⚔️", screen:SCREENS.TOURNAMENT, color:"#EF4444" },
+          { label:"Guide", icon:"📖", screen:SCREENS.HOW_TO_PLAY, color:"#60A5FA" },
+        ].map(a => (
+          <button key={a.label} onClick={() => { audio.play("click"); setScreen(a.screen); }} style={{ background:"#111827", border:`1px solid #1F2937`, borderRadius:10, padding:14, cursor:"pointer", display:"flex", alignItems:"center", gap:10, color:"#fff", fontFamily:"'Courier New',monospace", fontSize:13, transition:"all 0.2s" }}
+            onMouseEnter={e => e.currentTarget.style.borderColor=a.color}
+            onMouseLeave={e => e.currentTarget.style.borderColor="#1F2937"}>
+            <span style={{ fontSize:22 }}>{a.icon}</span>
+            <span>{a.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DashPlay({ setScreen, setGameMode, audio }) {
+  const modes = [
+    { id:GAME_MODES.SOLO, name:"Solo Classique", icon:"🚀", desc:"Mode histoire - niveaux progressifs", color:"#3B82F6", badge:"RECOMMANDÉ" },
+    { id:GAME_MODES.SURVIVAL, name:"Survie", icon:"🛡️", desc:"Survive le plus longtemps possible", color:"#10B981", badge:"INFINI" },
+    { id:GAME_MODES.BOSS_RUSH, name:"Boss Rush", icon:"👹", desc:"Affronte des boss en séquence", color:"#EF4444", badge:"DIFFICILE" },
+    { id:GAME_MODES.TIME_ATTACK, name:"Time Attack", icon:"⏱️", desc:"Maximum de score en 60 secondes", color:"#F59E0B", badge:"RAPIDE" },
+    { id:GAME_MODES.ZEN, name:"Mode Zen", icon:"🧘", desc:"Jeu relaxant sans game over", color:"#A78BFA", badge:"CALME" },
+    { id:GAME_MODES.HARDCORE, name:"Hardcore", icon:"💀", desc:"1 vie, difficulté maximale", color:"#DC2626", badge:"EXTRÊME" },
+  ];
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+      <div style={{ fontSize:11, color:"#6B7280", letterSpacing:3, marginBottom:4 }}>CHOISIR UN MODE</div>
+      {modes.map(m => (
+        <button key={m.id} onClick={() => { audio.play("click"); setGameMode(m.id); setScreen(SCREENS.GAME); }} style={{ background:"#111827", border:`1px solid #1F2937`, borderRadius:12, padding:16, cursor:"pointer", display:"flex", alignItems:"center", gap:14, color:"#fff", fontFamily:"'Courier New',monospace", textAlign:"left", transition:"all 0.2s", width:"100%" }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor=m.color; e.currentTarget.style.background="#1F2937"; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor="#1F2937"; e.currentTarget.style.background="#111827"; }}>
+          <div style={{ fontSize:32 }}>{m.icon}</div>
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:3 }}>
+              <span style={{ fontSize:15, fontWeight:"bold" }}>{m.name}</span>
+              <span style={{ fontSize:9, background:`${m.color}33`, color:m.color, padding:"2px 7px", borderRadius:20, letterSpacing:1 }}>{m.badge}</span>
+            </div>
+            <div style={{ fontSize:11, color:"#6B7280" }}>{m.desc}</div>
+          </div>
+          <span style={{ color:m.color, fontSize:18 }}>▶</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DashStats({ player, rank }) {
+  const stats = [
+    { label:"Score Total", value:player.totalScore.toLocaleString(), icon:"🏆" },
+    { label:"Meilleur Score", value:player.bestScore.toLocaleString(), icon:"⭐" },
+    { label:"Parties Jouées", value:player.totalGames, icon:"🎮" },
+    { label:"Enemies Détruits", value:player.totalKills, icon:"💥" },
+    { label:"Meilleur Combo", value:`x${player.bestCombo}`, icon:"🔥" },
+    { label:"Temps de Jeu", value:`${Math.floor(player.totalTimePlayed/60)}min`, icon:"⏱️" },
+    { label:"Succès", value:`${player.achievements.length}/${ACHIEVEMENTS_DATA.length}`, icon:"🏅" },
+    { label:"Niveau", value:player.level, icon:"📈" },
+    { label:"Rang", value:rank.name, icon:rank.icon },
+  ];
+
+  return (
+    <div>
+      <div style={{ fontSize:11, color:"#6B7280", letterSpacing:3, marginBottom:12 }}>STATISTIQUES GLOBALES</div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+        {stats.map(s => (
+          <div key={s.label} style={{ background:"#111827", border:"1px solid #1F2937", borderRadius:10, padding:14 }}>
+            <div style={{ fontSize:9, color:"#6B7280", marginBottom:4 }}>{s.icon} {s.label}</div>
+            <div style={{ fontSize:18, fontWeight:"bold", color:"#FFFFFF" }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DashSocial({ player, showNotif, audio }) {
+  const fakeLeaders = [
+    { rank:1, name:"NovaKing", score:98450, avatar:"🦅" },
+    { rank:2, name:"StarPilot", score:87230, avatar:"🌟" },
+    { rank:3, name:"SpaceAce", score:76590, avatar:"🚀" },
+    { rank:4, name:player.username, score:player.bestScore, avatar:player.avatar, isMe:true },
+    { rank:5, name:"CosmicX", score:45000, avatar:"🌌" },
+  ];
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+      <div style={{ fontSize:11, color:"#6B7280", letterSpacing:3 }}>TOP JOUEURS GLOBAL</div>
+      {fakeLeaders.map(l => (
+        <div key={l.rank} style={{ background:l.isMe?"#1E3A5F":"#111827", border:`1px solid ${l.isMe?"#3B82F6":"#1F2937"}`, borderRadius:10, padding:14, display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ width:28, textAlign:"center", fontWeight:"bold", color:l.rank<=3?"#F59E0B":"#6B7280", fontSize:l.rank<=3?16:13 }}>
+            {l.rank<=3?["🥇","🥈","🥉"][l.rank-1]:`#${l.rank}`}
+          </div>
+          <div style={{ fontSize:24 }}>{l.avatar}</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:14, color:"#fff" }}>{l.name}{l.isMe?" (Vous)":""}</div>
+            <div style={{ fontSize:11, color:"#6B7280" }}>{l.score.toLocaleString()} pts</div>
+          </div>
+          {!l.isMe && <button className="btn-secondary" style={{ fontSize:11, padding:"5px 10px" }} onClick={() => { showNotif("Défi envoyé! (multijoueur en prod)", "info", "⚔️"); audio.play("click"); }}>Défier</button>}
+        </div>
+      ))}
+
+      <div style={{ background:"#111827", border:"1px solid #1F2937", borderRadius:12, padding:16, textAlign:"center" }}>
+        <div style={{ fontSize:20, marginBottom:8 }}>🤝</div>
+        <div style={{ fontSize:14, color:"#fff", marginBottom:4 }}>Inviter des amis</div>
+        <div style={{ fontSize:11, color:"#6B7280", marginBottom:12 }}>Code: {player.id}</div>
+        <button className="btn-primary" style={{ fontSize:12 }} onClick={() => { navigator.clipboard?.writeText(player.id); showNotif("Code copié!", "success", "📋"); audio.play("coin"); }}>
+          📋 Copier le code
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// GAME CANVAS
+// ============================================================
+function GameCanvas({ player, gameMode, theme, audio, onEnd, onQuit }) {
+  const canvasRef = useRef(null);
+  const stateRef = useRef(null);
+  const animRef = useRef(null);
+  const keysRef = useRef({});
+  const touchRef = useRef({});
+  const lastShotRef = useRef(0);
+  const lastEnemyShotRef = useRef({});
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width = window.innerWidth > 480 ? 480 : window.innerWidth;
+    const H = canvas.height = window.innerHeight;
+
+    const ENEMY_COLS = 6, ENEMY_ROWS = 3;
+    const isHardcore = gameMode === GAME_MODES.HARDCORE;
+    const isSurvival = gameMode === GAME_MODES.SURVIVAL;
+    const isTimeAttack = gameMode === GAME_MODES.TIME_ATTACK;
+    const isZen = gameMode === GAME_MODES.ZEN;
+    const isBossRush = gameMode === GAME_MODES.BOSS_RUSH;
+
+    function makeStars() {
+      return Array.from({length:100}, () => ({ x:Math.random()*W, y:Math.random()*H, speed:Math.random()*0.5+0.1, size:Math.random()*1.5+0.5, brightness:Math.random() }));
+    }
+
+    function makeEnemies(lvl) {
+      const enemies = [];
+      const types = ["basic","scout","heavy","zigzag","sniper"];
+      for (let r=0; r<ENEMY_ROWS; r++) {
+        for (let c=0; c<ENEMY_COLS; c++) {
+          const typeIdx = Math.min(Math.floor(lvl/3)+r, types.length-1);
+          const type = types[typeIdx];
+          const hp = type==="heavy"?3:type==="sniper"?2:1;
+          enemies.push({
+            x: 40 + c*(W-80)/ENEMY_COLS + (W-80)/(ENEMY_COLS*2),
+            y: 80 + r*55,
+            w:32, h:24, alive:true, type,
+            hp, maxHp:hp,
+            hitFlash:0, deathAnim:0,
+            id:`${r}-${c}`,
+          });
+        }
+      }
+      return enemies;
+    }
+
+    function makeBoss(lvl) {
+      return {
+        x: W/2, y:100,
+        w:64, h:48,
+        hp: 15+lvl*5, maxHp:15+lvl*5,
+        alive:true, isBoss:true,
+        dir:1, speed:1.5+lvl*0.3,
+        phase:1, hitFlash:0, angle:0,
+        shieldActive: lvl >= 3,
+        shieldHp: lvl >= 3 ? 5 : 0,
+      };
+    }
+
+    function spawnPowerup(x, y) {
+      if (Math.random()<0.15) {
+        const types = ["shield","rapid","triple","bomb","slow"];
+        return { x, y, type:types[Math.floor(Math.random()*types.length)], vy:1.5, active:true, pulse:0 };
+      }
+      return null;
+    }
+
+    const startLives = isHardcore ? 1 : isZen ? 999 : 3;
+
+    stateRef.current = {
+      player: { x:W/2-16, y:H-90, w:32, h:32, lives:startLives, shield:0, rapid:0, triple:0, hit:0 },
+      bullets: [],
+      enemyBullets: [],
+      enemies: isBossRush ? [] : makeEnemies(0),
+      boss: isBossRush ? makeBoss(0) : null,
+      bossLevel: 0,
+      particles: [],
+      powerups: [],
+      stars: makeStars(),
+      score: 0,
+      combo: 0,
+      comboTimer: 0,
+      maxCombo: 0,
+      level: 1,
+      enemyDir: 1,
+      enemyDrop: false,
+      gameOver: false,
+      victory: false,
+      paused: false,
+      startTime: Date.now(),
+      elapsed: 0,
+      perfect: true,
+      scoreMulti: 1,
+      shakeTimer: 0,
+      shakeX: 0, shakeY: 0,
+      flashTimer: 0,
+      killCount: 0,
+      timeLimit: isTimeAttack ? 60000 : Infinity,
+    };
+
+    function addParticle(x, y, color="#3B82F6", count=8, speed=3, size=3, life=40) {
+      if (player.settings.particleDensity === "low" && count > 5) count = 3;
+      for (let i=0; i<count; i++) {
+        const angle = (Math.PI*2/count)*i + Math.random()*0.5;
+        stateRef.current.particles.push({ x, y, vx:Math.cos(angle)*(speed+Math.random()*speed), vy:Math.sin(angle)*(speed+Math.random()*speed), color, life, maxLife:life, size:size+Math.random()*size });
+      }
+    }
+
+    function addTextParticle(x, y, text, color="#FFFFFF") {
+      stateRef.current.particles.push({ x, y, text, color, vy:-1.5, life:60, maxLife:60, isText:true });
+    }
+
+    let frameCount = 0;
+    let lastFPSTime = Date.now();
+    let fps = 60;
+
+    function gameLoop() {
+      const s = stateRef.current;
+      if (!s || s.paused) { animRef.current = requestAnimationFrame(gameLoop); return; }
+
+      frameCount++;
+      if (frameCount % 30 === 0) {
+        const now = Date.now();
+        fps = Math.round(30000/(now-lastFPSTime));
+        lastFPSTime = now;
+      }
+
+      s.elapsed = (Date.now()-s.startTime)/1000;
+      if (isTimeAttack && Date.now()-s.startTime >= s.timeLimit) {
+        s.victory = true;
+        endGame();
+        return;
+      }
+
+      // Screen shake
+      if (s.shakeTimer > 0) {
+        s.shakeTimer--;
+        s.shakeX = (Math.random()-0.5)*6;
+        s.shakeY = (Math.random()-0.5)*6;
+      } else { s.shakeX=0; s.shakeY=0; }
+
+      ctx.save();
+      if (player.settings.screenShake && (s.shakeX||s.shakeY)) ctx.translate(s.shakeX, s.shakeY);
+
+      // Background
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0,0,W,H);
+
+      // Stars
+      for (const star of s.stars) {
+        star.y += star.speed;
+        if (star.y > H) { star.y=0; star.x=Math.random()*W; }
+        ctx.globalAlpha = 0.3+star.brightness*0.7;
+        ctx.fillStyle = "#FFFFFF";
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // Player movement
+      const p = s.player;
+      const spd = 4;
+      if ((keysRef.current["ArrowUp"]||keysRef.current["w"]||touchRef.current.up) && p.y > 50) p.y -= spd;
+      if ((keysRef.current["ArrowDown"]||keysRef.current["s"]||touchRef.current.down) && p.y < H-60) p.y += spd;
+      if ((keysRef.current["ArrowLeft"]||keysRef.current["a"]||touchRef.current.left) && p.x > 0) p.x -= spd;
+      if ((keysRef.current["ArrowRight"]||keysRef.current["d"]||touchRef.current.right) && p.x < W-p.w) p.x += spd;
+
+      // Auto-fire
+      const now = Date.now();
+      const fireRate = p.rapid > 0 ? 120 : 300;
+      if (now - lastShotRef.current > fireRate) {
+        lastShotRef.current = now;
+        const bulletColor = player.equippedBullet==="bullet_plasma"?"#7C3AED":player.equippedBullet==="bullet_laser"?"#DC2626":"#60A5FA";
+        s.bullets.push({ x:p.x+p.w/2-2, y:p.y, w:4, h:12, vy:-10, color:bulletColor });
+        if (p.triple > 0) {
+          s.bullets.push({ x:p.x+p.w/2-14, y:p.y+8, w:4, h:10, vy:-9, vx:-2, color:bulletColor });
+          s.bullets.push({ x:p.x+p.w/2+10, y:p.y+8, w:4, h:10, vy:-9, vx:2, color:bulletColor });
+        }
+        audio.play("shoot", 0.1);
+      }
+
+      // Update bullets
+      s.bullets = s.bullets.filter(b => {
+        b.x += b.vx||0;
+        b.y += b.vy;
+        if (b.y < -20 || b.x < -20 || b.x > W+20) return false;
+
+        // Hit boss
+        if (s.boss && s.boss.alive) {
+          const bs = s.boss;
+          if (b.x>bs.x-bs.w/2&&b.x<bs.x+bs.w/2&&b.y>bs.y-bs.h/2&&b.y<bs.y+bs.h/2) {
+            if (bs.shieldHp > 0) {
+              bs.shieldHp--;
+              bs.hitFlash=8;
+              addParticle(b.x,b.y,"#60A5FA",5,4,2,20);
+            } else {
+              bs.hp--;
+              bs.hitFlash=8;
+              addParticle(b.x,b.y,"#EF4444",8,5,3,30);
+              addTextParticle(b.x,b.y-10,"-1","#EF4444");
+              s.score += 50;
+              if (bs.hp <= 0) {
+                bs.alive = false;
+                addParticle(bs.x,bs.y,"#F59E0B",40,8,5,80);
+                addTextParticle(bs.x,bs.y-20,"BOSS VAINCU! +1000","#F59E0B");
+                s.score += 1000;
+                s.killCount++;
+                audio.play("explosion",0.4);
+                if (isBossRush) { s.bossLevel++; setTimeout(()=>{ s.boss=makeBoss(s.bossLevel); },2000); }
+                else { s.victory=true; endGame(); return false; }
+              }
+            }
+            return false;
+          }
+        }
+
+        // Hit enemies
+        for (const e of s.enemies) {
+          if (!e.alive) continue;
+          if (b.x>e.x-e.w/2&&b.x<e.x+e.w/2&&b.y>e.y-e.h/2&&b.y<e.y+e.h/2) {
+            e.hp--;
+            e.hitFlash = 8;
+            audio.play("hit",0.15);
+            if (e.hp <= 0) {
+              e.alive = false;
+              e.deathAnim = 1;
+              const pts = (e.type==="heavy"?30:e.type==="sniper"?25:e.type==="scout"?15:e.type==="zigzag"?20:10) * s.scoreMulti;
+              s.score += pts;
+              s.killCount++;
+              s.combo++;
+              s.comboTimer = 120;
+              if (s.combo > s.maxCombo) s.maxCombo = s.combo;
+              const comboBonus = Math.min(s.combo, 10);
+              s.scoreMulti = 1 + comboBonus * 0.1;
+              addParticle(e.x, e.y, e.type==="heavy"?"#EF4444":e.type==="sniper"?"#7C3AED":"#F59E0B", 12, 5, 3, 50);
+              addTextParticle(e.x, e.y-15, `+${pts}`, "#F59E0B");
+              if (s.combo > 1) addTextParticle(e.x, e.y-30, `x${s.combo} COMBO!`, "#FF6B6B");
+              const pu = spawnPowerup(e.x, e.y);
+              if (pu) s.powerups.push(pu);
+              audio.play("explosion",0.2);
+            } else {
+              addParticle(e.x, e.y, "#60A5FA", 4, 3, 2, 20);
+              addTextParticle(e.x, e.y-10, "-1", "#60A5FA");
+            }
+            return false;
+          }
+        }
+        return true;
+      });
+
+      // Combo timer
+      if (s.comboTimer > 0) {
+        s.comboTimer--;
+        if (s.comboTimer === 0) { s.combo=0; s.scoreMulti=1; }
+      }
+
+      // Enemy movement & logic
+      if (!s.boss) {
+        const alive = s.enemies.filter(e=>e.alive);
+        if (alive.length === 0 && !isSurvival && !isZen) {
+          s.level++;
+          if (s.level % 5 === 0 && !isBossRush) {
+            s.boss = makeBoss(s.level/5);
+            addTextParticle(W/2,H/2,"⚠️ BOSS !", "#EF4444");
+          } else {
+            s.enemies = makeEnemies(s.level-1);
+            addTextParticle(W/2,H/2,`NIVEAU ${s.level}!`,"#10B981");
+            audio.play("levelup",0.3);
+          }
+        }
+
+        // Survival - spawn enemies
+        if ((isSurvival||isZen) && Math.random()<0.008+s.elapsed*0.0002) {
+          const typeRng = Math.random();
+          const type = typeRng<0.4?"basic":typeRng<0.7?"scout":typeRng<0.85?"heavy":"zigzag";
+          s.enemies.push({ x:40+Math.random()*(W-80), y:-30, w:32, h:24, alive:true, type, hp:1, maxHp:1, hitFlash:0, deathAnim:0, id:`sp${Date.now()}${Math.random()}`, speedY:1+s.elapsed*0.01 });
+        }
+
+        let maxX=0, minX=W;
+        for (const e of alive) { if (e.x>maxX) maxX=e.x; if (e.x<minX) minX=e.x; }
+        const speed = (0.5+s.level*0.1) * (1+Math.max(0,(ENEMY_COLS*ENEMY_ROWS-alive.length)*0.05));
+        s.enemyDrop = (maxX+20>W-10&&s.enemyDir>0)||(minX-20<10&&s.enemyDir<0);
+        if (s.enemyDrop) s.enemyDir *= -1;
+
+        for (const e of s.enemies) {
+          e.hitFlash = Math.max(0,e.hitFlash-1);
+          if (!e.alive) continue;
+          if (isSurvival||isZen) {
+            e.y += e.speedY||1;
+            e.x += Math.sin(e.y*0.05)*1.5;
+            if (e.y > H+40) { e.alive=false; }
+          } else {
+            e.x += speed*s.enemyDir;
+            if (s.enemyDrop) e.y += 20;
+            if (e.type==="zigzag") e.x += Math.sin(Date.now()*0.003+e.y)*1.5;
+          }
+        }
+
+        // Enemy shooting (max 5 bullets per 2s per enemy)
+        const shotInterval = 2000;
+        for (const e of alive) {
+          if (!e.alive) continue;
+          if (e.type==="sniper"||e.type==="heavy"||(Math.random()<0.002)) {
+            const eid = e.id;
+            const lastShot = lastEnemyShotRef.current[eid]||0;
+            if (now-lastShot > shotInterval) {
+              lastEnemyShotRef.current[eid] = now;
+              const angle = e.type==="sniper" ? Math.atan2(p.y-e.y, p.x+p.w/2-e.x) : Math.PI/2;
+              s.enemyBullets.push({ x:e.x, y:e.y+e.h/2, w:3, h:8, vx:Math.cos(angle)*4, vy:Math.sin(angle)*4+3, color:e.type==="heavy"?"#EF4444":"#F97316" });
+            }
+          }
+        }
+      }
+
+      // Boss logic
+      if (s.boss && s.boss.alive) {
+        const bs = s.boss;
+        bs.hitFlash = Math.max(0,bs.hitFlash-1);
+        bs.angle += 0.02;
+        bs.x += bs.dir*bs.speed;
+        if (bs.x+bs.w/2 > W-20) bs.dir=-1;
+        if (bs.x-bs.w/2 < 20) bs.dir=1;
+        if (bs.hp < bs.maxHp*0.5) bs.phase=2;
+        if (bs.hp < bs.maxHp*0.25) bs.phase=3;
+
+        // Boss firing pattern - max 5 shots per 2s
+        const bossId = "boss";
+        const lastBossShot = lastEnemyShotRef.current[bossId]||0;
+        const bossFireRate = 2000/(bs.phase);
+        if (now-lastBossShot > bossFireRate) {
+          lastEnemyShotRef.current[bossId] = now;
+          const shots = Math.min(5, bs.phase===3?5:bs.phase===2?3:1);
+          for (let i=0;i<shots;i++) {
+            const a = bs.phase===1?Math.PI/2:bs.phase===2?(Math.PI/2+(i-1)*0.3):(Math.PI/4+i*0.3);
+            s.enemyBullets.push({ x:bs.x, y:bs.y+bs.h/2, w:5, h:10, vx:Math.cos(a)*5, vy:Math.sin(a)*5, color:"#EF4444", isBoss:true });
+          }
+        }
+      }
+
+      // Enemy bullets
+      s.enemyBullets = s.enemyBullets.filter(b => {
+        b.x += b.vx||0;
+        b.y += b.vy;
+        if (b.y>H+20||b.x<-20||b.x>W+20) return false;
+        const hit = b.x>p.x&&b.x<p.x+p.w&&b.y>p.y&&b.y<p.y+p.h;
+        if (hit && !isZen) {
+          if (p.shield>0) {
+            p.shield=0;
+            addParticle(p.x+p.w/2,p.y,"#60A5FA",10,5,3,30);
+            addTextParticle(p.x+p.w/2,p.y-20,"BOUCLIER!","#60A5FA");
+          } else {
+            p.lives--;
+            p.hit=30;
+            s.perfect=false;
+            s.shakeTimer=12;
+            s.flashTimer=10;
+            addParticle(p.x+p.w/2,p.y+p.h/2,"#EF4444",20,6,4,50);
+            audio.play("hit",0.4);
+            if (p.lives<=0 && !isZen) { s.gameOver=true; endGame(); return false; }
+          }
+          return false;
+        }
+        return true;
+      });
+
+      // Powerups
+      s.powerups = s.powerups.filter(pu => {
+        if (!pu.active) return false;
+        pu.y += pu.vy;
+        pu.pulse++;
+        if (pu.y>H+30) return false;
+        if (pu.x>p.x-20&&pu.x<p.x+p.w+20&&pu.y>p.y&&pu.y<p.y+p.h+30) {
+          const dur=300;
+          if (pu.type==="shield") p.shield=1;
+          else if (pu.type==="rapid") p.rapid=dur;
+          else if (pu.type==="triple") p.triple=dur;
+          else if (pu.type==="bomb") { s.enemies.forEach(e=>{if(e.alive){e.alive=false;addParticle(e.x,e.y,"#F59E0B",10,5,3,40);s.score+=10;}}); }
+          else if (pu.type==="slow") s.scoreMulti=Math.min(3,s.scoreMulti+0.5);
+          addTextParticle(p.x+p.w/2,p.y-20,pu.type.toUpperCase()+"!","#10B981");
+          audio.play("powerup",0.25);
+          return false;
+        }
+        return true;
+      });
+
+      if (p.rapid>0) p.rapid--;
+      if (p.triple>0) p.triple--;
+      if (p.hit>0) p.hit--;
+
+      // Flash overlay
+      if (s.flashTimer>0) { s.flashTimer--; ctx.fillStyle=`rgba(255,0,0,${s.flashTimer*0.04})`; ctx.fillRect(0,0,W,H); }
+
+      // Particles
+      s.particles = s.particles.filter(pt => {
+        pt.life--;
+        if (pt.life<=0) return false;
+        if (pt.isText) {
+          pt.y += pt.vy;
+          ctx.globalAlpha = pt.life/pt.maxLife;
+          ctx.fillStyle = pt.color;
+          ctx.font = "bold 12px 'Courier New'";
+          ctx.textAlign = "center";
+          ctx.fillText(pt.text, pt.x, pt.y);
+          ctx.textAlign = "left";
+        } else {
+          pt.x += pt.vx; pt.y += pt.vy; pt.vx*=0.95; pt.vy*=0.95;
+          ctx.globalAlpha = pt.life/pt.maxLife;
+          ctx.fillStyle = pt.color;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.size*(pt.life/pt.maxLife), 0, Math.PI*2);
+          ctx.fill();
+        }
+        return true;
+      });
+      ctx.globalAlpha=1;
+
+      // Draw powerups
+      for (const pu of s.powerups) {
+        const icons = {shield:"🛡️",rapid:"⚡",triple:"🔱",bomb:"💣",slow:"✨"};
+        const colors = {shield:"#60A5FA",rapid:"#F59E0B",triple:"#A78BFA",bomb:"#EF4444",slow:"#10B981"};
+        ctx.save();
+        ctx.globalAlpha = 0.7+Math.sin(pu.pulse*0.1)*0.3;
+        ctx.fillStyle = colors[pu.type]||"#fff";
+        ctx.strokeStyle = colors[pu.type]||"#fff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(pu.x, pu.y, 14, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.font = "16px serif";
+        ctx.textAlign = "center";
+        ctx.fillText(icons[pu.type]||"?", pu.x, pu.y+6);
+        ctx.textAlign = "left";
+        ctx.restore();
+      }
+
+      // Draw enemies
+      for (const e of s.enemies) {
+        if (!e.alive) continue;
+        ctx.save();
+        if (e.hitFlash>0) { ctx.globalAlpha = 0.5+Math.sin(e.hitFlash*1.5)*0.5; }
+        const colors = {basic:"#10B981",scout:"#60A5FA",heavy:"#EF4444",zigzag:"#F59E0B",sniper:"#A78BFA"};
+        const shapes = {basic:"▼",scout:"◆",heavy:"★",zigzag:"✦",sniper:"▲"};
+        ctx.fillStyle = colors[e.type]||"#888";
+        ctx.shadowColor = colors[e.type]||"#888";
+        ctx.shadowBlur = 8;
+        ctx.font = `${e.hitFlash>0?28:26}px serif`;
+        ctx.textAlign = "center";
+        ctx.fillText(shapes[e.type]||"▼", e.x, e.y+8);
+        ctx.textAlign = "left";
+        if (e.hp > 1) {
+          const bw = e.w; const bx = e.x-bw/2; const by = e.y-e.h/2-8;
+          ctx.fillStyle="#1F2937"; ctx.fillRect(bx,by,bw,4);
+          ctx.fillStyle=colors[e.type]||"#fff"; ctx.fillRect(bx,by,bw*(e.hp/e.maxHp),4);
+        }
+        ctx.restore();
+      }
+
+      // Draw boss
+      if (s.boss && s.boss.alive) {
+        const bs = s.boss;
+        ctx.save();
+        ctx.translate(bs.x, bs.y);
+        if (bs.hitFlash>0) ctx.globalAlpha=0.5+Math.sin(bs.hitFlash)*0.5;
+        const bossColor = bs.phase===3?"#EF4444":bs.phase===2?"#F59E0B":"#A78BFA";
+        ctx.strokeStyle=bossColor; ctx.lineWidth=2; ctx.shadowColor=bossColor; ctx.shadowBlur=15;
+        ctx.beginPath();
+        for (let i=0;i<8;i++) {
+          const a=bs.angle+i*Math.PI/4;
+          const r=bs.phase===3?30+Math.sin(bs.angle*5)*8:28;
+          i===0?ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r):ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);
+        }
+        ctx.closePath(); ctx.stroke();
+        ctx.font="bold 24px serif"; ctx.textAlign="center"; ctx.fillStyle=bossColor; ctx.fillText("👾",0,8);
+        // Shield
+        if (bs.shieldHp>0) {
+          ctx.strokeStyle="#60A5FA"; ctx.lineWidth=2; ctx.globalAlpha=0.5+Math.sin(Date.now()*0.005)*0.3;
+          ctx.beginPath(); ctx.arc(0,0,40,0,Math.PI*2); ctx.stroke();
+        }
+        ctx.restore();
+        // Boss HP Bar
+        const bw=W*0.7, bx=(W-bw)/2, by=20;
+        ctx.fillStyle="#1F2937"; ctx.fillRect(bx,by,bw,12); ctx.fillRect(bx-1,by-1,bw+2,14);
+        const bossColor2 = bs.phase===3?"#EF4444":bs.phase===2?"#F59E0B":"#A78BFA";
+        ctx.fillStyle=bossColor2; ctx.fillRect(bx,by,bw*(bs.hp/bs.maxHp),12);
+        ctx.fillStyle="#fff"; ctx.font="10px 'Courier New'"; ctx.textAlign="center"; ctx.fillText(`👾 BOSS ${bs.hp}/${bs.maxHp}`,W/2,by+9); ctx.textAlign="left";
+      }
+
+      // Draw player ship
+      ctx.save();
+      ctx.translate(p.x+p.w/2, p.y+p.h/2);
+      if (p.hit>0) { ctx.globalAlpha=0.3+Math.sin(p.hit*0.5)*0.7; }
+      const shipColor = player.equippedShip==="ship_gold"?"#F59E0B":player.equippedShip==="ship_plasma"?"#8B5CF6":player.equippedShip==="ship_shadow"?"#6B7280":player.equippedShip==="ship_nova"?"#EF4444":"#60A5FA";
+      ctx.shadowColor=shipColor; ctx.shadowBlur=15;
+      // Ship body
+      ctx.fillStyle=shipColor;
+      ctx.beginPath(); ctx.moveTo(0,-16); ctx.lineTo(-12,12); ctx.lineTo(-5,6); ctx.lineTo(0,10); ctx.lineTo(5,6); ctx.lineTo(12,12); ctx.closePath(); ctx.fill();
+      // Cockpit
+      ctx.fillStyle="#111"; ctx.beginPath(); ctx.arc(0,-2,6,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=shipColor+"88"; ctx.beginPath(); ctx.arc(0,-2,4,0,Math.PI*2); ctx.fill();
+      // Shield indicator
+      if (p.shield>0) { ctx.strokeStyle="#60A5FA"; ctx.lineWidth=2; ctx.globalAlpha=0.6+Math.sin(Date.now()*0.01)*0.4; ctx.beginPath(); ctx.arc(0,0,22,0,Math.PI*2); ctx.stroke(); }
+      // Rapid fire
+      if (p.rapid>0) { ctx.strokeStyle="#F59E0B"; ctx.lineWidth=1; ctx.globalAlpha=0.4; ctx.beginPath(); ctx.arc(0,0,18,0,Math.PI*2); ctx.stroke(); }
+      ctx.restore();
+
+      // Draw player bullets
+      for (const b of s.bullets) {
+        ctx.fillStyle = b.color||"#60A5FA";
+        ctx.shadowColor = b.color||"#60A5FA";
+        ctx.shadowBlur = 8;
+        ctx.fillRect(b.x-b.w/2, b.y, b.w, b.h);
+      }
+
+      // Draw enemy bullets
+      for (const b of s.enemyBullets) {
+        ctx.fillStyle=b.color; ctx.shadowColor=b.color; ctx.shadowBlur=6;
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.isBoss?4:3, 0, Math.PI*2); ctx.fill();
+      }
+
+      // HUD - Score & Lives only
+      ctx.shadowBlur=0;
+      ctx.fillStyle="rgba(0,0,0,0.6)"; ctx.fillRect(0,0,W,44);
+      ctx.fillStyle="#FFFFFF"; ctx.font="bold 18px 'Courier New'";
+      ctx.fillText(s.score.toLocaleString(), 16, 28);
+      // Lives (dots)
+      for (let i=0;i<Math.min(p.lives,10);i++) {
+        ctx.fillStyle="#60A5FA"; ctx.beginPath(); ctx.arc(W-16-i*14, 22, 5, 0, Math.PI*2); ctx.fill();
+      }
+      // Combo
+      if (s.combo>1) {
+        ctx.fillStyle="#F59E0B"; ctx.font="bold 13px 'Courier New'";
+        ctx.textAlign="center"; ctx.fillText(`x${s.combo}`, W/2, 30); ctx.textAlign="left";
+      }
+      // Timer for time attack
+      if (isTimeAttack) {
+        const remaining=Math.max(0,60-s.elapsed);
+        ctx.fillStyle=remaining<10?"#EF4444":"#10B981"; ctx.font="bold 13px 'Courier New'";
+        ctx.textAlign="right"; ctx.fillText(`⏱ ${remaining.toFixed(1)}s`,W-70,30); ctx.textAlign="left";
+      }
+      // FPS
+      if (player.settings.showFPS) {
+        ctx.fillStyle="#374151"; ctx.font="10px 'Courier New'"; ctx.fillText(`${fps} FPS`,W-55,H-8);
+      }
+
+      ctx.restore();
+      animRef.current = requestAnimationFrame(gameLoop);
+    }
+
+    function endGame() {
+      cancelAnimationFrame(animRef.current);
+      const s = stateRef.current;
+      onEnd({ score:s.score, kills:s.killCount, survived:s.elapsed, combo:s.maxCombo, level:s.level, perfect:s.perfect, timeMs:(Date.now()-s.startTime) });
+    }
+
+    animRef.current = requestAnimationFrame(gameLoop);
+
+    function onKey(e, down) {
+      keysRef.current[e.key] = down;
+      if (e.key==="Escape" && down) stateRef.current.paused = !stateRef.current.paused;
+      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
+    }
+    window.addEventListener("keydown", e=>onKey(e,true));
+    window.addEventListener("keyup", e=>onKey(e,false));
+
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      window.removeEventListener("keydown", e=>onKey(e,true));
+      window.removeEventListener("keyup", e=>onKey(e,false));
+    };
+  }, []);
+
+  const handleTouch = (dir, val) => {
+    touchRef.current[dir] = val;
+  };
+
+  return (
+    <div style={{ width:"100%", height:"100vh", background:"#000", display:"flex", flexDirection:"column", alignItems:"center", position:"relative", overflow:"hidden" }}>
+      <canvas ref={canvasRef} style={{ display:"block", touchAction:"none" }} />
+
+      {/* Touch Controls */}
+      <div style={{ position:"fixed", bottom:20, left:0, right:0, display:"flex", justifyContent:"space-between", padding:"0 20px", pointerEvents:"none", zIndex:10 }}>
+        {/* D-Pad */}
+        <div style={{ display:"grid", gridTemplateColumns:"40px 40px 40px", gridTemplateRows:"40px 40px 40px", gap:4, pointerEvents:"all" }}>
+          {[
+            [null,1,null], [1,null,1], [null,1,null]
+          ].map((row,ri) => row.map((cell,ci) => {
+            const dirs = [[null,"up",null],[" left",null,"right"],[null,"down",null]];
+            const icons = [[null,"▲",null],[["◀",null,"▶"]][0],["◀",null,"▶"],[null,"▼",null]];
+            const dpad = [["▲",null,null],["◀",null,"▶"],[null,"▼",null]];
+            const dir = ri===0&&ci===1?"up":ri===1&&ci===0?"left":ri===1&&ci===2?"right":ri===2&&ci===1?"down":null;
+            const icon = ri===0&&ci===1?"▲":ri===1&&ci===0?"◀":ri===1&&ci===2?"▶":ri===2&&ci===1?"▼":null;
+            if (!dir) return <div key={`${ri}-${ci}`} style={{ width:40,height:40 }} />;
+            return (
+              <button key={`${ri}-${ci}`}
+                onTouchStart={e=>{e.preventDefault();handleTouch(dir,true);}}
+                onTouchEnd={e=>{e.preventDefault();handleTouch(dir,false);}}
+                onMouseDown={()=>handleTouch(dir,true)}
+                onMouseUp={()=>handleTouch(dir,false)}
+                style={{ width:40,height:40,background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,color:"#fff",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",touchAction:"none" }}>
+                {icon}
+              </button>
+            );
+          }))}
+        </div>
+
+        {/* Action buttons */}
+        <div style={{ display:"flex", flexDirection:"column", gap:8, alignItems:"flex-end", pointerEvents:"all" }}>
+          <button onClick={() => { if(stateRef.current) stateRef.current.paused=!stateRef.current.paused; }} style={{ padding:"8px 14px", background:"rgba(255,255,255,0.15)", border:"1px solid rgba(255,255,255,0.2)", borderRadius:8, color:"#fff", fontSize:12, cursor:"pointer", fontFamily:"'Courier New',monospace" }}>
+            ⏸ PAUSE
+          </button>
+          <button onClick={onQuit} style={{ padding:"8px 14px", background:"rgba(239,68,68,0.3)", border:"1px solid #EF4444", borderRadius:8, color:"#EF4444", fontSize:12, cursor:"pointer", fontFamily:"'Courier New',monospace" }}>
+            ✕ QUITTER
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// GAME OVER SCREEN
+// ============================================================
+function GameOverScreen({ player, setScreen, audio, theme }) {
+  return (
+    <div style={{ width:"100%", minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"radial-gradient(ellipse,#1A0000,#000)", padding:24, textAlign:"center" }}>
+      <div style={{ fontSize:60, marginBottom:16, animation:"pulse 1s infinite" }}>💥</div>
+      <div style={{ fontSize:36, fontWeight:"bold", color:"#EF4444", letterSpacing:4, marginBottom:8 }}>GAME OVER</div>
+      <div style={{ fontSize:13, color:"#6B7280", marginBottom:32 }}>Meilleur score: {player.bestScore.toLocaleString()}</div>
+
+      <div style={{ background:"#111827", border:"1px solid #374151", borderRadius:16, padding:24, width:"100%", maxWidth:320, marginBottom:32, display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+        {[
+          {l:"Score", v:player.totalScore-player.bestScore<0?player.bestScore:player.totalScore},
+          {l:"Meilleur", v:player.bestScore},
+          {l:"Niveau", v:player.level},
+          {l:"Combo Max", v:`x${player.bestCombo}`},
+        ].map(s=>(
+          <div key={s.l} style={{ textAlign:"center" }}>
+            <div style={{ fontSize:18,fontWeight:"bold",color:"#fff" }}>{s.v.toLocaleString?.()??s.v}</div>
+            <div style={{ fontSize:10,color:"#6B7280" }}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:10, width:"100%", maxWidth:280 }}>
+        <button className="btn-primary" onClick={() => { audio.play("click"); setScreen(SCREENS.GAME); }}>🔄 REJOUER</button>
+        <button className="btn-secondary" onClick={() => { audio.play("click"); setScreen(SCREENS.DASHBOARD); }}>🏠 ACCUEIL</button>
+        <button className="btn-secondary" onClick={() => { audio.play("click"); setScreen(SCREENS.LEADERBOARD); }}>🏆 CLASSEMENT</button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// SETTINGS SCREEN
+// ============================================================
+function SettingsScreen({ player, updatePlayer, setScreen, theme, audio, showNotif }) {
+  const [tab, setTab] = useState("audio");
+  const tabs = [
+    { id:"audio", icon:"🔊", label:"Audio" },
+    { id:"visual", icon:"🎨", label:"Visuel" },
+    { id:"gameplay", icon:"🎮", label:"Gameplay" },
+    { id:"account", icon:"👤", label:"Compte" },
+    { id:"accessibility", icon:"♿", label:"Access." },
+    { id:"language", icon:"🌍", label:"Langue" },
+  ];
+
+  const upd = (path, val) => {
+    if (path.startsWith("settings.")) {
+      const key = path.replace("settings.","");
+      updatePlayer(prev => ({ ...prev, settings: { ...prev.settings, [key]: val } }));
+    } else {
+      updatePlayer({ [path]: val });
+    }
+    audio.play("click");
+  };
+
+  return (
+    <div style={{ maxWidth:480, margin:"0 auto", minHeight:"100vh", padding:"16px 0 80px" }}>
+      <div style={{ padding:"0 20px 16px", display:"flex", alignItems:"center", gap:12 }}>
+        <button className="btn-secondary" style={{ padding:"8px 14px" }} onClick={() => setScreen(SCREENS.DASHBOARD)}>← Retour</button>
+        <h2 style={{ margin:0, fontSize:20, color:"#fff" }}>⚙️ Paramètres</h2>
+      </div>
+
+      <div style={{ display:"flex", gap:4, padding:"0 16px 16px", overflowX:"auto" }}>
+        {tabs.map(t=>(
+          <button key={t.id} onClick={()=>{setTab(t.id);audio.play("click");}} style={{ padding:"6px 12px", borderRadius:20, border:"none", cursor:"pointer", fontSize:11, whiteSpace:"nowrap", background:tab===t.id?"#1D4ED8":"#1F2937", color:tab===t.id?"#fff":"#9CA3AF", fontFamily:"'Courier New',monospace" }}>
+            {t.icon} {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ padding:"0 16px" }}>
+        {tab==="audio" && (
+          <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
+            {[
+              {label:"Effets Sonores", key:"sfx", type:"toggle"},
+              {label:"Musique", key:"music", type:"toggle"},
+              {label:"Volume", key:"volume", type:"range", min:0, max:1, step:0.05},
+            ].map(s=>(
+              <div key={s.key} className="card">
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                  <span style={{ color:"#fff",fontSize:14 }}>{s.label}</span>
+                  {s.type==="toggle" ? (
+                    <button onClick={()=>upd(`settings.${s.key}`,!player.settings[s.key])} style={{ width:46,height:24,borderRadius:12,background:player.settings[s.key]?"#1D4ED8":"#374151",border:"none",cursor:"pointer",position:"relative",transition:"background 0.2s" }}>
+                      <div style={{ width:18,height:18,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:player.settings[s.key]?24:4,transition:"left 0.2s" }}/>
+                    </button>
+                  ) : (
+                    <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                      <span style={{ color:"#6B7280",fontSize:12 }}>{Math.round(player.settings[s.key]*100)}%</span>
+                      <input type="range" min={s.min} max={s.max} step={s.step} value={player.settings[s.key]} onChange={e=>upd(`settings.${s.key}`,parseFloat(e.target.value))} style={{ width:100 }} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab==="visual" && (
+          <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
+            <div className="card">
+              <div style={{ fontSize:12,color:"#6B7280",marginBottom:12 }}>THÈME DE COULEUR</div>
+              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8 }}>
+                {Object.entries(THEMES).map(([k,v])=>(
+                  <button key={k} onClick={()=>{updatePlayer({theme:k});audio.play("click");}} style={{ padding:10,borderRadius:8,border:`2px solid ${player.theme===k?v.accent:"#374151"}`,background:v.bg,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4 }}>
+                    <div style={{ width:20,height:20,borderRadius:"50%",background:v.accent }}/>
+                    <span style={{ fontSize:9,color:v.text,textTransform:"capitalize" }}>{k}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {[
+              {label:"Screen Shake", key:"screenShake", type:"toggle"},
+              {label:"Afficher FPS", key:"showFPS", type:"toggle"},
+              {label:"Densité particules", key:"particleDensity", type:"select", opts:["low","medium","high"]},
+            ].map(s=>(
+              <div key={s.key} className="card">
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                  <span style={{ color:"#fff",fontSize:14 }}>{s.label}</span>
+                  {s.type==="toggle" ? (
+                    <button onClick={()=>upd(`settings.${s.key}`,!player.settings[s.key])} style={{ width:46,height:24,borderRadius:12,background:player.settings[s.key]?"#1D4ED8":"#374151",border:"none",cursor:"pointer",position:"relative",transition:"background 0.2s" }}>
+                      <div style={{ width:18,height:18,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:player.settings[s.key]?24:4,transition:"left 0.2s" }}/>
+                    </button>
+                  ) : (
+                    <select value={player.settings[s.key]||"high"} onChange={e=>upd(`settings.${s.key}`,e.target.value)}>
+                      {s.opts.map(o=><option key={o} value={o}>{o}</option>)}
+                    </select>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab==="gameplay" && (
+          <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
+            <div className="card">
+              <div style={{ fontSize:12,color:"#6B7280",marginBottom:12 }}>DIFFICULTÉ</div>
+              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8 }}>
+                {["facile","normal","difficile"].map(d=>(
+                  <button key={d} onClick={()=>{upd("settings.difficulty",d);}} style={{ padding:10,borderRadius:8,border:`1px solid ${player.settings.difficulty===d?"#3B82F6":"#374151"}`,background:player.settings.difficulty===d?"#1E3A5F":"#1F2937",cursor:"pointer",color:"#fff",fontSize:12,fontFamily:"'Courier New',monospace",textTransform:"capitalize" }}>{d}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab==="account" && (
+          <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
+            <div className="card">
+              <div style={{ fontSize:12,color:"#6B7280",marginBottom:8 }}>NOM D'UTILISATEUR</div>
+              <input defaultValue={player.username} onBlur={e=>updatePlayer({username:e.target.value})} style={{ width:"100%",background:"#1F2937",border:"1px solid #374151",color:"#fff",padding:"8px 12px",borderRadius:8,fontFamily:"'Courier New',monospace",fontSize:14,boxSizing:"border-box" }} />
+            </div>
+            <div className="card">
+              <div style={{ fontSize:12,color:"#6B7280",marginBottom:8 }}>AVATAR</div>
+              <div style={{ display:"flex",flexWrap:"wrap",gap:8 }}>
+                {["🚀","🛸","⭐","🌌","🔥","💎","🦅","🐉","⚡","🌟","🎯","🏆"].map(a=>(
+                  <button key={a} onClick={()=>{updatePlayer({avatar:a});audio.play("click");}} style={{ width:40,height:40,borderRadius:8,border:`2px solid ${player.avatar===a?"#3B82F6":"#374151"}`,background:"#1F2937",cursor:"pointer",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center" }}>{a}</button>
+                ))}
+              </div>
+            </div>
+            <div className="card">
+              <div style={{ fontSize:12,color:"#6B7280",marginBottom:8 }}>IDENTIFIANT</div>
+              <div style={{ fontSize:14,color:"#9CA3AF",fontFamily:"monospace" }}>{player.id}</div>
+            </div>
+            <button className="btn-secondary" style={{ color:"#EF4444",borderColor:"#EF4444" }} onClick={()=>{ if(window.confirm("Réinitialiser toutes les données?")){localStorage.removeItem("novas_player");window.location.reload();} }}>
+              🗑️ Réinitialiser les données
+            </button>
+          </div>
+        )}
+
+        {tab==="accessibility" && (
+          <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
+            {[
+              {label:"Mode Daltonien", key:"colorblind", type:"toggle"},
+              {label:"Réduire les animations", key:"reducedMotion", type:"toggle"},
+              {label:"Contraste élevé", key:"highContrast", type:"toggle"},
+            ].map(s=>(
+              <div key={s.key} className="card">
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                  <span style={{ color:"#fff",fontSize:14 }}>{s.label}</span>
+                  <button onClick={()=>upd(`settings.${s.key}`,!player.settings[s.key])} style={{ width:46,height:24,borderRadius:12,background:player.settings[s.key]?"#1D4ED8":"#374151",border:"none",cursor:"pointer",position:"relative",transition:"background 0.2s" }}>
+                    <div style={{ width:18,height:18,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:player.settings[s.key]?24:4,transition:"left 0.2s" }}/>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab==="language" && (
+          <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+            {Object.entries(LANGUAGES).map(([k,v])=>(
+              <button key={k} onClick={()=>{updatePlayer(p=>({...p,settings:{...p.settings,language:k},language:k}));audio.play("click");showNotif("Langue changée!","success","🌍");}} style={{ background:player.settings.language===k?"#1E3A5F":"#111827",border:`1px solid ${player.settings.language===k?"#3B82F6":"#1F2937"}`,borderRadius:10,padding:14,cursor:"pointer",color:"#fff",fontFamily:"'Courier New',monospace",fontSize:13,textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                <span>{{fr:"🇫🇷 Français",en:"🇬🇧 English",es:"🇪🇸 Español",de:"🇩🇪 Deutsch",pt:"🇧🇷 Português"}[k]}</span>
+                {player.settings.language===k&&<span style={{ color:"#3B82F6" }}>✓</span>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// PROFILE SCREEN
+// ============================================================
+function ProfileScreen({ player, updatePlayer, setScreen, theme, rank, xpPct, xpNeeded, showNotif, audio }) {
+  const nextRankIdx = RANKS.findIndex(r=>r.name===rank.name)+1;
+  const nextRank = RANKS[nextRankIdx];
+
+  return (
+    <div style={{ maxWidth:480, margin:"0 auto", minHeight:"100vh", padding:"16px 16px 80px" }}>
+      <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:20 }}>
+        <button className="btn-secondary" style={{ padding:"8px 14px" }} onClick={()=>setScreen(SCREENS.DASHBOARD)}>← Retour</button>
+        <h2 style={{ margin:0,fontSize:20,color:"#fff" }}>👤 Profil</h2>
+      </div>
+
+      {/* Profile Card */}
+      <div style={{ background:"linear-gradient(135deg,#111827,#1F2937)",border:`1px solid ${rank.color}44`,borderRadius:16,padding:24,marginBottom:16,textAlign:"center" }}>
+        <div style={{ width:80,height:80,borderRadius:"50%",background:"#111",border:`3px solid ${rank.color}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:44,margin:"0 auto 12px" }}>
+          {player.avatar}
+        </div>
+        <div style={{ fontSize:22,fontWeight:"bold",color:"#fff",marginBottom:4 }}>{player.username}</div>
+        <div style={{ fontSize:13,color:rank.color,marginBottom:4 }}>{rank.icon} {rank.name}</div>
+        <div style={{ fontSize:11,color:"#6B7280",marginBottom:16 }}>ID: {player.id}</div>
+
+        <div style={{ marginBottom:8 }}>
+          <div style={{ display:"flex",justifyContent:"space-between",fontSize:11,color:"#6B7280",marginBottom:4 }}>
+            <span>Niveau {player.level}</span><span>{player.xp}/{xpNeeded} XP</span>
+          </div>
+          <div className="progress-bar" style={{ height:8 }}>
+            <div className="progress-fill" style={{ width:`${xpPct}%`,height:"100%",background:`linear-gradient(90deg,${rank.color},#fff4)` }}/>
+          </div>
+        </div>
+        {nextRank && <div style={{ fontSize:10,color:"#6B7280" }}>Prochain rang: {nextRank.icon} {nextRank.name} ({nextRank.min.toLocaleString()} pts)</div>}
+      </div>
+
+      {/* Stats Grid */}
+      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:16 }}>
+        {[
+          {l:"Meilleur Score",v:player.bestScore.toLocaleString(),ic:"🏆",c:"#F59E0B"},
+          {l:"Score Total",v:player.totalScore.toLocaleString(),ic:"⭐",c:"#60A5FA"},
+          {l:"Parties",v:player.totalGames,ic:"🎮",c:"#A78BFA"},
+          {l:"Ennemis Tués",v:player.totalKills,ic:"💥",c:"#EF4444"},
+          {l:"Meilleur Combo",v:`x${player.bestCombo}`,ic:"🔥",c:"#F97316"},
+          {l:"Temps Total",v:`${Math.floor(player.totalTimePlayed/60)}min`,ic:"⏱️",c:"#10B981"},
+          {l:"Succès",v:`${player.achievements.length}/${ACHIEVEMENTS_DATA.length}`,ic:"🏅",c:"#F59E0B"},
+          {l:"Coins",v:player.coins.toLocaleString(),ic:"💰",c:"#F59E0B"},
+        ].map(s=>(
+          <div key={s.l} style={{ background:"#111827",border:"1px solid #1F2937",borderRadius:10,padding:14 }}>
+            <div style={{ fontSize:9,color:"#6B7280",marginBottom:3 }}>{s.ic} {s.l}</div>
+            <div style={{ fontSize:18,fontWeight:"bold",color:s.c }}>{s.v}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Achievements Preview */}
+      <div style={{ background:"#111827",border:"1px solid #1F2937",borderRadius:12,padding:16 }}>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+          <span style={{ fontSize:13,color:"#fff",fontWeight:"bold" }}>🏆 Succès récents</span>
+          <button className="btn-secondary" style={{ fontSize:11,padding:"5px 10px" }} onClick={()=>{audio.play("click");setScreen(SCREENS.ACHIEVEMENTS);}}>Voir tout →</button>
+        </div>
+        <div style={{ display:"flex",flexWrap:"wrap",gap:8 }}>
+          {player.achievements.slice(-8).map(id=>{
+            const a=ACHIEVEMENTS_DATA.find(a=>a.id===id);
+            return a?(<div key={id} title={a.title} style={{ width:36,height:36,borderRadius:8,background:`#1F2937`,border:`1px solid #374151`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18 }}>{a.icon}</div>):null;
+          })}
+          {player.achievements.length===0&&<div style={{ fontSize:12,color:"#6B7280" }}>Jouez pour débloquer des succès!</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// LEADERBOARD SCREEN
+// ============================================================
+function LeaderboardScreen({ player, setScreen, theme }) {
+  const [tab, setTab] = useState("global");
+  const fakeGlobal = [
+    {rank:1,name:"NovaKing2086",score:248900,level:42,avatar:"🦅",rank_name:"NOVAS"},
+    {rank:2,name:"StarDestroyer",score:198650,level:38,avatar:"🌟",rank_name:"Legend"},
+    {rank:3,name:"CosmicAce",score:187230,level:35,avatar:"🚀",rank_name:"Legend"},
+    {rank:4,name:"GalaxyPilot",score:156780,level:31,avatar:"🌌",rank_name:"Elite"},
+    {rank:5,name:"NebulaPro",score:134560,level:28,avatar:"💫",rank_name:"Elite"},
+    {rank:6,name:"SpaceLord",score:112300,level:25,avatar:"⚡",rank_name:"Commander"},
+    {rank:7,name:"StarSurfer",score:98760,level:22,avatar:"🎯",rank_name:"Commander"},
+    {rank:8,name:player.username,score:player.bestScore,level:player.level,avatar:player.avatar,rank_name:getRank(player.bestScore).name,isMe:true},
+  ].sort((a,b)=>b.score-a.score).map((p,i)=>({...p,rank:i+1}));
+
+  return (
+    <div style={{ maxWidth:480,margin:"0 auto",minHeight:"100vh",padding:"16px 16px 80px" }}>
+      <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:16 }}>
+        <button className="btn-secondary" style={{ padding:"8px 14px" }} onClick={()=>setScreen(SCREENS.DASHBOARD)}>← Retour</button>
+        <h2 style={{ margin:0,fontSize:20,color:"#fff" }}>🏆 Classement</h2>
+      </div>
+
+      <div style={{ display:"flex",gap:4,marginBottom:16 }}>
+        {["global","weekly","friends"].map(t=>(
+          <button key={t} onClick={()=>setTab(t)} style={{ padding:"6px 14px",borderRadius:20,border:"none",cursor:"pointer",fontSize:12,background:tab===t?"#1D4ED8":"#1F2937",color:tab===t?"#fff":"#9CA3AF",fontFamily:"'Courier New',monospace" }}>
+            {{global:"🌍 Global",weekly:"📅 Semaine",friends:"👥 Amis"}[t]}
+          </button>
+        ))}
+      </div>
+
+      {/* Top 3 Podium */}
+      <div style={{ display:"flex",justifyContent:"center",alignItems:"flex-end",gap:8,marginBottom:20,height:120 }}>
+        {[fakeGlobal[1],fakeGlobal[0],fakeGlobal[2]].map((p,i)=>{
+          const heights=[85,105,70];
+          const medals=["🥈","🥇","🥉"];
+          const colors=["#9CA3AF","#F59E0B","#CD7C2F"];
+          return (
+            <div key={p.rank} style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:4 }}>
+              <div style={{ fontSize:20 }}>{p.avatar}</div>
+              <div style={{ fontSize:9,color:"#9CA3AF",maxWidth:60,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{p.name}</div>
+              <div style={{ width:72,height:heights[i],background:`${colors[i]}22`,border:`1px solid ${colors[i]}44`,borderRadius:"4px 4px 0 0",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2 }}>
+                <div style={{ fontSize:22 }}>{medals[i]}</div>
+                <div style={{ fontSize:10,color:colors[i],fontWeight:"bold" }}>{p.score.toLocaleString()}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Full List */}
+      <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+        {fakeGlobal.map(p=>(
+          <div key={p.rank} style={{ background:p.isMe?"#1E3A5F":"#111827",border:`1px solid ${p.isMe?"#3B82F6":p.rank<=3?"#374151":"#1F2937"}`,borderRadius:10,padding:12,display:"flex",alignItems:"center",gap:12 }}>
+            <div style={{ width:32,textAlign:"center",fontWeight:"bold",fontSize:p.rank<=3?18:14,color:p.rank===1?"#F59E0B":p.rank===2?"#9CA3AF":p.rank===3?"#CD7C2F":"#6B7280" }}>
+              {p.rank<=3?["🥇","🥈","🥉"][p.rank-1]:`#${p.rank}`}
+            </div>
+            <div style={{ fontSize:24 }}>{p.avatar}</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13,color:"#fff" }}>{p.name}{p.isMe?" (Vous)":""}</div>
+              <div style={{ fontSize:10,color:"#6B7280" }}>Niv. {p.level} • {p.rank_name}</div>
+            </div>
+            <div style={{ textAlign:"right" }}>
+              <div style={{ fontSize:14,fontWeight:"bold",color:"#F59E0B" }}>{p.score.toLocaleString()}</div>
+              <div style={{ fontSize:9,color:"#6B7280" }}>pts</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// ACHIEVEMENTS SCREEN
+// ============================================================
+function AchievementsScreen({ player, setScreen, theme, unlockAchievement }) {
+  const [filter, setFilter] = useState("all");
+  const unlocked = player.achievements;
+  const total = ACHIEVEMENTS_DATA.length;
+  const pct = Math.round(unlocked.length/total*100);
+
+  const filtered = ACHIEVEMENTS_DATA.filter(a => {
+    if (filter==="unlocked") return unlocked.includes(a.id);
+    if (filter==="locked") return !unlocked.includes(a.id);
+    return true;
+  });
+
+  return (
+    <div style={{ maxWidth:480,margin:"0 auto",minHeight:"100vh",padding:"16px 16px 80px" }}>
+      <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:16 }}>
+        <button className="btn-secondary" style={{ padding:"8px 14px" }} onClick={()=>setScreen(SCREENS.DASHBOARD)}>← Retour</button>
+        <h2 style={{ margin:0,fontSize:20,color:"#fff" }}>🏆 Succès</h2>
+      </div>
+
+      {/* Progress */}
+      <div style={{ background:"#111827",border:"1px solid #1F2937",borderRadius:12,padding:16,marginBottom:16 }}>
+        <div style={{ display:"flex",justifyContent:"space-between",marginBottom:8 }}>
+          <span style={{ color:"#fff",fontWeight:"bold" }}>{unlocked.length}/{total} débloqués</span>
+          <span style={{ color:"#F59E0B" }}>{pct}% complété</span>
+        </div>
+        <div className="progress-bar" style={{ height:8 }}>
+          <div className="progress-fill" style={{ width:`${pct}%`,height:"100%",background:"linear-gradient(90deg,#F59E0B,#FDE68A)" }}/>
+        </div>
+      </div>
+
+      {/* Filter */}
+      <div style={{ display:"flex",gap:4,marginBottom:12 }}>
+        {["all","unlocked","locked"].map(f=>(
+          <button key={f} onClick={()=>setFilter(f)} style={{ padding:"5px 12px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,background:filter===f?"#1D4ED8":"#1F2937",color:filter===f?"#fff":"#9CA3AF",fontFamily:"'Courier New',monospace" }}>
+            {{all:"Tous",unlocked:"Débloqués",locked:"Verrouillés"}[f]}
+          </button>
+        ))}
+      </div>
+
+      {/* List */}
+      <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+        {filtered.map(a=>{
+          const done=unlocked.includes(a.id);
+          const rarityColors={common:"#9CA3AF",rare:"#60A5FA",epic:"#A78BFA",legendary:"#F59E0B"};
+          return (
+            <div key={a.id} style={{ background:done?"#111827":"#0D1117",border:`1px solid ${done?rarityColors[a.rarity]+"44":"#1F2937"}`,borderRadius:10,padding:14,display:"flex",alignItems:"center",gap:12,opacity:done?1:0.6 }}>
+              <div style={{ width:44,height:44,borderRadius:10,background:done?`${rarityColors[a.rarity]}22`:"#1F2937",border:`1px solid ${done?rarityColors[a.rarity]+"44":"#374151"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22 }}>
+                {done?a.icon:"🔒"}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ display:"flex",gap:6,alignItems:"center",marginBottom:2 }}>
+                  <span style={{ fontSize:13,color:"#fff",fontWeight:"bold" }}>{a.title}</span>
+                  <span className={`rarity-${a.rarity}`} style={{ fontSize:9,letterSpacing:1 }}>{a.rarity.toUpperCase()}</span>
+                </div>
+                <div style={{ fontSize:11,color:"#6B7280" }}>{a.desc}</div>
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontSize:12,color:"#F59E0B",fontWeight:"bold" }}>+{a.points}</div>
+                <div style={{ fontSize:9,color:"#6B7280" }}>coins</div>
+                {done&&<div style={{ fontSize:9,color:"#10B981",marginTop:2 }}>✓ OBTENU</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// SHOP SCREEN
+// ============================================================
+function ShopScreen({ player, setScreen, theme, buyItem, audio, updatePlayer, showNotif }) {
+  const [filter, setFilter] = useState("all");
+  const types = ["all","ship","trail","bullet","boost","powerup","currency"];
+
+  const filtered = SHOP_ITEMS.filter(i => filter==="all"||i.type===filter);
+
+  return (
+    <div style={{ maxWidth:480,margin:"0 auto",minHeight:"100vh",padding:"16px 16px 80px" }}>
+      <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16 }}>
+        <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+          <button className="btn-secondary" style={{ padding:"8px 14px" }} onClick={()=>setScreen(SCREENS.DASHBOARD)}>← Retour</button>
+          <h2 style={{ margin:0,fontSize:20,color:"#fff" }}>🛍️ Boutique</h2>
+        </div>
+        <div style={{ fontSize:12,background:"#1F2937",padding:"6px 12px",borderRadius:20,color:"#F59E0B",display:"flex",alignItems:"center",gap:4 }}>
+          💰 {player.coins.toLocaleString()}
+        </div>
+      </div>
+
+      {/* Daily Deal */}
+      <div style={{ background:"linear-gradient(135deg,#78350F,#B45309)",borderRadius:12,padding:16,marginBottom:16,display:"flex",alignItems:"center",gap:12 }}>
+        <div style={{ fontSize:32 }}>⚡</div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:11,color:"#FDE68A",letterSpacing:2,marginBottom:2 }}>OFFRE DU JOUR</div>
+          <div style={{ fontSize:14,color:"#fff",fontWeight:"bold" }}>XP Boost x3 - 50% OFF</div>
+          <div style={{ fontSize:11,color:"#FDE68A" }}>Expire dans 18:42:10</div>
+        </div>
+        <button className="btn-primary" style={{ fontSize:11,padding:"8px 12px",background:"#F59E0B",color:"#000" }} onClick={()=>showNotif("Boost activé! +3x XP pendant 1h","success","⚡")}>
+          100💰
+        </button>
+      </div>
+
+      {/* Filter */}
+      <div style={{ display:"flex",gap:4,overflowX:"auto",marginBottom:12,paddingBottom:4 }}>
+        {types.map(t=>(
+          <button key={t} onClick={()=>{setFilter(t);audio.play("click");}} style={{ padding:"5px 12px",borderRadius:20,border:"none",cursor:"pointer",fontSize:11,whiteSpace:"nowrap",background:filter===t?"#1D4ED8":"#1F2937",color:filter===t?"#fff":"#9CA3AF",fontFamily:"'Courier New',monospace" }}>
+            {{all:"Tout",ship:"🚀 Vaisseaux",trail:"✨ Traînées",bullet:"💫 Projectiles",boost:"⚡ Boosts",powerup:"🛡️ Powerups",currency:"💰 Monnaie"}[t]}
+          </button>
+        ))}
+      </div>
+
+      {/* Items Grid */}
+      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
+        {filtered.map(item=>{
+          const owned=player.inventory.includes(item.id);
+          const equipped=player.equippedShip===item.id||player.equippedTrail===item.id||player.equippedBullet===item.id;
+          const rarityColors={common:"#9CA3AF",rare:"#60A5FA",epic:"#A78BFA",legendary:"#F59E0B"};
+          return (
+            <div key={item.id} style={{ background:"#111827",border:`1px solid ${owned?rarityColors[item.rarity]+"44":"#1F2937"}`,borderRadius:12,padding:14,display:"flex",flexDirection:"column",gap:8 }}>
+              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start" }}>
+                <div style={{ width:48,height:48,borderRadius:10,background:`${item.color}22`,border:`1px solid ${item.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26 }}>{item.icon}</div>
+                <span className={`rarity-${item.rarity}`} style={{ fontSize:9,letterSpacing:1 }}>{item.rarity.toUpperCase()}</span>
+              </div>
+              <div>
+                <div style={{ fontSize:12,color:"#fff",fontWeight:"bold",marginBottom:2 }}>{item.name}</div>
+                <div style={{ fontSize:10,color:"#6B7280" }}>{item.desc}</div>
+              </div>
+              <div style={{ display:"flex",gap:6 }}>
+                {owned ? (
+                  equipped ? (
+                    <div style={{ flex:1,textAlign:"center",fontSize:10,color:"#10B981",background:"#064E3B",padding:"6px",borderRadius:6 }}>✓ ÉQUIPÉ</div>
+                  ) : (
+                    <button onClick={()=>{
+                      if(item.type==="ship") updatePlayer({equippedShip:item.id});
+                      else if(item.type==="trail") updatePlayer({equippedTrail:item.id});
+                      else if(item.type==="bullet") updatePlayer({equippedBullet:item.id});
+                      showNotif(`${item.name} équipé!`,"success","✅"); audio.play("click");
+                    }} style={{ flex:1,background:"#1D4ED8",border:"none",borderRadius:6,color:"#fff",fontSize:11,padding:6,cursor:"pointer",fontFamily:"'Courier New',monospace" }}>
+                      Équiper
+                    </button>
+                  )
+                ) : (
+                  <button onClick={()=>buyItem(item)} style={{ flex:1,background:player.coins>=item.price?"#1D4ED8":"#374151",border:"none",borderRadius:6,color:"#fff",fontSize:11,padding:6,cursor:"pointer",fontFamily:"'Courier New',monospace",display:"flex",justifyContent:"center",alignItems:"center",gap:4 }}>
+                    {item.real?`${item.price}€`:`${item.price}💰`}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MISSIONS SCREEN
+// ============================================================
+function MissionsScreen({ player, setScreen, theme, updatePlayer, showNotif, audio }) {
+  const getDailyMissions = () => {
+    const today = new Date().toDateString();
+    if (player.lastDaily === today && player.dailyMissions.length > 0) {
+      return player.dailyMissions;
+    }
+    const missions = DAILY_MISSIONS_DATA.map(m => ({ ...m, progress: 0, completed: false }));
+    updatePlayer({ dailyMissions: missions, lastDaily: today });
+    return missions;
+  };
+
+  const missions = getDailyMissions();
+  const completed = missions.filter(m=>m.completed).length;
+
+  const claimMission = (m) => {
+    if (!m.completed) { showNotif("Mission non complétée!", "error", "❌"); return; }
+    updatePlayer(prev => ({
+      ...prev,
+      coins: prev.coins + m.reward,
+      dailyMissions: prev.dailyMissions.map(dm => dm.id===m.id?{...dm,claimed:true}:dm),
+    }));
+    showNotif(`+${m.reward} coins!`, "success", "💰");
+    audio.play("coin");
+  };
+
+  return (
+    <div style={{ maxWidth:480,margin:"0 auto",minHeight:"100vh",padding:"16px 16px 80px" }}>
+      <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:16 }}>
+        <button className="btn-secondary" style={{ padding:"8px 14px" }} onClick={()=>setScreen(SCREENS.DASHBOARD)}>← Retour</button>
+        <h2 style={{ margin:0,fontSize:20,color:"#fff" }}>📋 Missions</h2>
+      </div>
+
+      {/* Daily Progress */}
+      <div style={{ background:"linear-gradient(135deg,#064E3B,#065F46)",borderRadius:12,padding:16,marginBottom:16 }}>
+        <div style={{ display:"flex",justifyContent:"space-between",marginBottom:8 }}>
+          <span style={{ color:"#fff",fontWeight:"bold" }}>Missions Quotidiennes</span>
+          <span style={{ color:"#6EE7B7" }}>{completed}/{missions.length}</span>
+        </div>
+        <div className="progress-bar" style={{ height:6 }}>
+          <div className="progress-fill" style={{ width:`${(completed/missions.length)*100}%`,height:"100%",background:"#10B981" }}/>
+        </div>
+        <div style={{ fontSize:11,color:"#6EE7B7",marginTop:6 }}>Reset dans: {24-new Date().getHours()}h {60-new Date().getMinutes()}min</div>
+      </div>
+
+      <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+        {missions.map(m=>(
+          <div key={m.id} style={{ background:"#111827",border:`1px solid ${m.completed?"#10B98144":"#1F2937"}`,borderRadius:12,padding:16 }}>
+            <div style={{ display:"flex",alignItems:"flex-start",gap:12 }}>
+              <div style={{ width:44,height:44,borderRadius:10,background:m.completed?"#064E3B":"#1F2937",border:`1px solid ${m.completed?"#10B981":"#374151"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22 }}>
+                {m.icon}
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:13,color:"#fff",fontWeight:"bold",marginBottom:2 }}>{m.title}</div>
+                <div style={{ fontSize:11,color:"#6B7280",marginBottom:8 }}>{m.desc}</div>
+                <div className="progress-bar" style={{ height:5,marginBottom:4 }}>
+                  <div className="progress-fill" style={{ width:`${Math.min(100,(m.progress/m.target)*100)}%`,height:"100%",background:m.completed?"#10B981":"#3B82F6" }}/>
+                </div>
+                <div style={{ fontSize:10,color:"#6B7280" }}>{Math.min(m.progress,m.target)}/{m.target}</div>
+              </div>
+              <div style={{ display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6 }}>
+                <div style={{ fontSize:12,color:"#F59E0B",fontWeight:"bold" }}>+{m.reward}💰</div>
+                {m.completed && !m.claimed && <button className="btn-primary" style={{ fontSize:11,padding:"6px 10px" }} onClick={()=>claimMission(m)}>Réclamer</button>}
+                {m.claimed && <div style={{ fontSize:10,color:"#10B981" }}>✓ Réclamé</div>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Weekly missions teaser */}
+      <div style={{ background:"#111827",border:"1px solid #374151",borderRadius:12,padding:16,marginTop:16,opacity:0.6 }}>
+        <div style={{ fontSize:13,color:"#9CA3AF",fontWeight:"bold",marginBottom:4 }}>📅 Missions Hebdomadaires</div>
+        <div style={{ fontSize:11,color:"#6B7280" }}>Complétez toutes les missions quotidiennes pour débloquer!</div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// TOURNAMENT SCREEN
+// ============================================================
+function TournamentScreen({ player, setScreen, theme, audio, showNotif }) {
+  const tournaments = [
+    { id:"weekly",name:"Tournoi Hebdomadaire",prize:"5,000 💰",players:128,ends:"3j 14h",icon:"⚔️",color:"#3B82F6",status:"open" },
+    { id:"monthly",name:"Championship Mensuel",prize:"25,000 💰",players:512,ends:"12j",icon:"🏆",color:"#F59E0B",status:"soon" },
+    { id:"nova_cup",name:"NOVAS CUP",prize:"100,000 💰 + Badge",players:1024,ends:"28j",icon:"👑",color:"#EF4444",status:"soon" },
+  ];
+
+  return (
+    <div style={{ maxWidth:480,margin:"0 auto",minHeight:"100vh",padding:"16px 16px 80px" }}>
+      <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:16 }}>
+        <button className="btn-secondary" style={{ padding:"8px 14px" }} onClick={()=>setScreen(SCREENS.DASHBOARD)}>← Retour</button>
+        <h2 style={{ margin:0,fontSize:20,color:"#fff" }}>⚔️ Tournois</h2>
+      </div>
+
+      {tournaments.map(t=>(
+        <div key={t.id} style={{ background:"linear-gradient(135deg,#111827,#1F2937)",border:`1px solid ${t.color}44`,borderRadius:16,padding:20,marginBottom:12 }}>
+          <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:12 }}>
+            <div style={{ width:52,height:52,borderRadius:12,background:`${t.color}22`,border:`1px solid ${t.color}44`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28 }}>{t.icon}</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:15,fontWeight:"bold",color:"#fff",marginBottom:2 }}>{t.name}</div>
+              <div style={{ fontSize:12,color:t.color }}>🎁 {t.prize}</div>
+            </div>
+            <div style={{ textAlign:"right" }}>
+              <div style={{ fontSize:10,color:"#6B7280",marginBottom:2 }}>SE TERMINE DANS</div>
+              <div style={{ fontSize:13,color:"#fff" }}>{t.ends}</div>
+            </div>
+          </div>
+          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+            <span style={{ fontSize:11,color:"#6B7280" }}>👥 {t.players} joueurs</span>
+            <button className="btn-primary" style={{ fontSize:12,padding:"8px 16px",background:t.status==="open"?undefined:"#374151",cursor:t.status==="open"?"pointer":"default" }}
+              onClick={()=>{ if(t.status==="open"){ showNotif("Inscription au tournoi!","success","⚔️"); audio.play("achievement"); } else showNotif("Tournoi bientôt disponible!","info","⏳"); }}>
+              {t.status==="open"?"✓ S'inscrire":"🔒 Bientôt"}
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {/* My Tournament */}
+      <div style={{ background:"#111827",border:"1px solid #374151",borderRadius:12,padding:16,marginTop:8 }}>
+        <div style={{ fontSize:13,color:"#fff",fontWeight:"bold",marginBottom:12 }}>📊 Mes Tournois</div>
+        <div style={{ fontSize:12,color:"#6B7280",textAlign:"center",padding:"20px 0" }}>
+          Pas encore inscrit à un tournoi.<br/>Rejoignez le tournoi hebdomadaire pour commencer!
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// HOW TO PLAY SCREEN
+// ============================================================
+function HowToPlayScreen({ setScreen, theme }) {
+  const sections = [
+    {
+      title:"🕹️ Contrôles",
+      items:[
+        {icon:"⬆️", label:"Haut", desc:"Avancer (flèche ↑ ou W)"},
+        {icon:"⬇️", label:"Bas", desc:"Reculer (flèche ↓ ou S)"},
+        {icon:"⬅️➡️", label:"Gauche/Droite", desc:"Se déplacer latéralement"},
+        {icon:"🤖", label:"Tir Auto", desc:"Votre vaisseau tire automatiquement"},
+        {icon:"📱", label:"Mobile", desc:"Utilisez le D-pad en bas à gauche"},
+      ]
+    },
+    {
+      title:"👾 Ennemis",
+      items:[
+        {icon:"▼", label:"Basic (vert)", desc:"1 HP - Ennemi de base"},
+        {icon:"◆", label:"Scout (bleu)", desc:"1 HP - Plus rapide"},
+        {icon:"★", label:"Heavy (rouge)", desc:"3 HP - Résistant"},
+        {icon:"✦", label:"Zigzag (jaune)", desc:"1 HP - Mouvements imprévisibles"},
+        {icon:"▲", label:"Sniper (violet)", desc:"2 HP - Tire en visant"},
+        {icon:"👾", label:"BOSS", desc:"Beaucoup de HP - Tirs multiples"},
+      ]
+    },
+    {
+      title:"⚡ Powerups",
+      items:[
+        {icon:"🛡️", label:"Bouclier", desc:"Absorbe une attaque"},
+        {icon:"⚡", label:"Rapid Fire", desc:"Tir rapide temporaire"},
+        {icon:"🔱", label:"Triple Shot", desc:"3 projectiles simultanés"},
+        {icon:"💣", label:"Bombe", desc:"Détruit tous les ennemis à l'écran"},
+        {icon:"✨", label:"Score Boost", desc:"Augmente le multiplicateur"},
+      ]
+    },
+    {
+      title:"🏆 Progression",
+      items:[
+        {icon:"🔥", label:"Combo", desc:"Enchaînez les kills pour plus de points"},
+        {icon:"⭐", label:"XP", desc:"Gagnez de l'XP pour monter de niveau"},
+        {icon:"💰", label:"Coins", desc:"Achetez des cosmétiques en boutique"},
+        {icon:"🏅", label:"Succès", desc:"Débloquez des succès pour des récompenses"},
+      ]
+    },
+  ];
+
+  return (
+    <div style={{ maxWidth:480,margin:"0 auto",minHeight:"100vh",padding:"16px 16px 80px" }}>
+      <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:20 }}>
+        <button className="btn-secondary" style={{ padding:"8px 14px" }} onClick={()=>setScreen(SCREENS.DASHBOARD)}>← Retour</button>
+        <h2 style={{ margin:0,fontSize:20,color:"#fff" }}>📖 Comment Jouer</h2>
+      </div>
+
+      {sections.map(sec=>(
+        <div key={sec.title} style={{ marginBottom:20 }}>
+          <div style={{ fontSize:14,fontWeight:"bold",color:"#fff",marginBottom:10 }}>{sec.title}</div>
+          <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
+            {sec.items.map(item=>(
+              <div key={item.label} style={{ background:"#111827",border:"1px solid #1F2937",borderRadius:8,padding:12,display:"flex",alignItems:"center",gap:12 }}>
+                <div style={{ width:36,height:36,borderRadius:8,background:"#1F2937",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 }}>{item.icon}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:12,color:"#fff",fontWeight:"bold" }}>{item.label}</div>
+                  <div style={{ fontSize:11,color:"#6B7280" }}>{item.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <div style={{ background:"linear-gradient(135deg,#1E3A5F,#1D4ED8)",borderRadius:12,padding:16,textAlign:"center" }}>
+        <div style={{ fontSize:16,fontWeight:"bold",color:"#fff",marginBottom:8 }}>Prêt à jouer?</div>
+        <button className="btn-primary" onClick={()=>setScreen(SCREENS.DASHBOARD)}>🚀 Commencer</button>
+      </div>
+    </div>
+  );
+}
